@@ -30,7 +30,9 @@ void tkOutput(void * pvParameters)
 
 ( void ) pvParameters;
 
-	vTaskDelay( ( TickType_t)( 1000 / portTICK_RATE_MS ) );
+	while ( !startTask )
+		vTaskDelay( ( TickType_t)( 100 / portTICK_RATE_MS ) );
+
 	snprintf_P( out_printfBuff,sizeof(out_printfBuff),PSTR("starting tkOutputs..\r\n\0"));
 	FreeRTOS_write( &pdUART1, out_printfBuff, sizeof(out_printfBuff) );
 

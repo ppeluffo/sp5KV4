@@ -122,6 +122,7 @@ s08 MCP_queryDcd( u08 *pin);
 s08 MCP_queryRi( u08 *pin);
 s08 MCP_queryDin0( u08 *pin);
 s08 MCP_queryDin1( u08 *pin);
+s08 MCP_query2Din( u08 *din0, u08 *din1 );
 //
 #define MCP_setOutsResetPin( value ) ( pvMCP_testAndSet( MCP1_ADDR, MCP1_OLATB, value, MCP1_RESET ) )
 #define MCP_outputsReset() MCP_setOutsResetPin(0)
@@ -150,5 +151,7 @@ s08 MCP_setOutsPhase(  u08 outId, u08 value );
 #define MCP_output2Phase_10() MCP_setOutsPhase(2,0)
 #define MCP_output3Phase_01() MCP_setOutsPhase(3,0)
 #define MCP_output3Phase_10() MCP_setOutsPhase(3,1)
+
+s08 MCP_outsPulse( u08 channel, u08 phase, u16 delay );
 
 #endif /* AVRLIBFRTOS_MCP_SP5KFRTOS_H_ */

@@ -28,7 +28,7 @@ typedef enum {
 } t_perifericos;
 
 
-#define DEBUG_I2C
+//#define DEBUG_I2C
 
 /* Peripheral handles are void * for data hiding purposes. */
 typedef const void * Peripheral_Descriptor_t;
@@ -78,10 +78,12 @@ portBASE_TYPE FreeRTOS_ioctl( Peripheral_Descriptor_t const xPeripheral, uint32_
 #define UART_TXQUEUE	8
 //-----------------------------------------------------------------------
 // Defino el tamanio de los buffers
+// La UART0 es la que tiene el modem
 #define  UART0_RXBUFFER_LEN ( ( u16 ) ( 64 ))
 #define  UART0_TXBUFFER_LEN ( ( u08 ) ( 128 ))
 
-#define  UART1_RXBUFFER_LEN ( ( u08 ) ( 32 ))
+// La UART1 es la de la terminal RS232
+#define  UART1_RXBUFFER_LEN ( ( u08 ) ( 64 ))
 #define  UART1_TXBUFFER_LEN ( ( u08 ) ( 128 ))
 
 typedef struct {

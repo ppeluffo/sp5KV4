@@ -30,13 +30,13 @@ u08 xBytes = 0;
 	// Luego indicamos el periferico i2c en el cual queremos leer
 	val = deviceId;
 	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_DEVADDRESS, &val);
-	// Luego indicamos cuantos bytes voy a leer: largo
+	// Luego indicamos la direccion del dispositivo: largo
 	val = 1;
 	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESSLENGTH, &val);
 	// y direccion
 	val = byteAddr;
 	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
-
+	// Por ultimo indico la direccion interna a leer
 	// Por ultimo leemos 1 byte.
 	xBytes = 1;
 	regValue = value;
@@ -183,7 +183,7 @@ s08 retS;
 u08 regValue;
 
 	retS = MCP_read( MCP1_ADDR, MCP1_GPIOB, &regValue);
-	*pin = ( regValue & 0x20) >> 6;
+	*pin = ( regValue & 0x40) >> 6;
 	return(retS);
 }
 //------------------------------------------------------------------------------------
@@ -194,7 +194,19 @@ s08 retS;
 u08 regValue;
 
 	retS = MCP_read( MCP1_ADDR, MCP1_GPIOB, &regValue);
-	*pin = ( regValue & 0x10) >> 5;
+	*pin = ( regValue & 0x20) >> 5;
+	return(retS);
+}
+//------------------------------------------------------------------------------------
+s08 MCP_query2Din( u08 *din0, u08 *din1 )
+{
+
+s08 retS;
+u08 regValue;
+
+	retS = MCP_read( MCP1_ADDR, MCP1_GPIOB, &regValue);
+	*din0 = ( regValue & 0x40) >> 6;
+	*din1 = ( regValue & 0x20) >> 5;
 	return(retS);
 }
 //------------------------------------------------------------------------------------
@@ -254,6 +266,55 @@ s08 MCP_setOutsEnablePin(  u08 outId, u08 value )
 
 }
 //------------------------------------------------------------------------------------
+s08 MCP_outsPulse( u08 channel, u08 phase, u16 delay )
+{
+	// Genera un pulso en el canal 'channel', con la secuencia de fases 'phase' y
+	// de duracion 'delay'
+	// Deja el sistema en reposo ( sleep )
+
+s08 retS = FALSE;
+
+	MCP_outputsNoSleep();
+	MCP_outputsNoReset();
+	switch(channel) {
+	case 0:
+		if ( phase == 0 ) { retS = MCP_output0Phase_01(); }
+		if ( phase == 1 ) { retS = MCP_output0Phase_10(); }
+		MCP_output0Enable();
+		vTaskDelay( ( TickType_t)( delay / portTICK_RATE_MS ) );
+		MCP_output0Disable();
+		break;
+	case 1:
+		if ( phase == 0 ) { retS = MCP_output1Phase_01(); }
+		if ( phase == 1 ) { retS = MCP_output1Phase_10(); }
+		MCP_output1Enable();
+		vTaskDelay( ( TickType_t)( delay / portTICK_RATE_MS ) );
+		MCP_output1Disable();
+		break;
+	case 2:
+		if ( phase == 0 ) { retS = MCP_output2Phase_01(); }
+		if ( phase == 1 ) { retS = MCP_output2Phase_10(); }
+		MCP_output2Enable();
+		vTaskDelay( ( TickType_t)( delay / portTICK_RATE_MS ) );
+		MCP_output2Disable();
+		break;
+	case 3:
+		if ( phase == 0 ) { retS = MCP_output3Phase_01(); }
+		if ( phase == 1 ) { retS = MCP_output3Phase_10(); }
+		MCP_output3Enable();
+		vTaskDelay( ( TickType_t)( delay / portTICK_RATE_MS ) );
+		MCP_output3Disable();
+		break;
+	default:
+		retS = FALSE;
+		break;
+	}
+
+	MCP_outputsSleep();
+	return(retS);
+
+}
+/*------------------------------------------------------------------------------------*/
 // FUNCIONES PRIVADAS
 //------------------------------------------------------------------------------------
 static void pvMCP_init_MCP0(void)

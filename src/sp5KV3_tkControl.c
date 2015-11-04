@@ -26,15 +26,39 @@ void tkControl(void * pvParameters)
 ( void ) pvParameters;
 TickType_t xLastWakeTime;
 const TickType_t sleepTime = ( 1000 / portTICK_RATE_MS );
+u16 ffRcd;
+StatBuffer_t pxFFStatBuffer;
 
-	vTaskDelay( ( TickType_t)( 1000 / portTICK_RATE_MS ) );
+	vTaskDelay( ( TickType_t)( 500 / portTICK_RATE_MS ) );
 
 	MCP_init();
 	pv_ledsInit();
 	pv_wdgInit();
+	// inicializo la memoria EE ( fileSysyem)
+	ffRcd = FF_fopen();
+	FF_stat(&pxFFStatBuffer);
+	if ( pxFFStatBuffer.errno != pdFF_ERRNO_NONE ) {
+		snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("FSInit ERROR (%d)[%d]\r\n\0"),ffRcd, pxFFStatBuffer.errno);
+	} else {
+		snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("FSInit OK\r\nwrPtr=%d,rdPtr=%d,delPtr=%d,4wr=%d,4rd=%d,4del=%d\r\n\0"),pxFFStatBuffer.WRptr,pxFFStatBuffer.RDptr, pxFFStatBuffer.DELptr,pxFFStatBuffer.rcds4wr,pxFFStatBuffer.rcds4rd,pxFFStatBuffer.rcds4del);
+	}
+	FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
+
+	// load systemVars
+	if  ( u_loadSystemParams() == TRUE ) {
+		snprintf_P( ctl_printfBuff,CHAR64,PSTR("Load config OK.\r\n\0") );
+	} else {
+		u_loadDefaults();
+		u_saveSystemParams();
+		snprintf_P( ctl_printfBuff,CHAR64,PSTR("Load config ERROR: defaults !!\r\n\0") );
+	}
+	FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
 
 	snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("starting tkControl..\r\n\0"));
 	FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
+
+	// Habilito arrancar las otras tareas
+	startTask = TRUE;
 
 	 // Initialise the xLastWakeTime variable with the current time.
 	 xLastWakeTime = xTaskGetTickCount();
@@ -48,6 +72,7 @@ const TickType_t sleepTime = ( 1000 / portTICK_RATE_MS );
 		// Ejecuto la rutina sincronicamente c/2s
 		// Wait for 1000ms.
 		vTaskDelayUntil( &xLastWakeTime, sleepTime );
+		xLastWakeTime = xTaskGetTickCount();
 
 		pv_flashLeds();
 		pv_checkWdg();
@@ -78,11 +103,14 @@ static u08 l_timer = 1;
 		return;
 
 	l_timer = 1;
+	// Prendo
 	MCP_setLed_LogicBoard(1);		// Led placa logica
 	cbi(LED_KA_PORT, LED_KA_BIT);	// Led placa analogica ( kalive )
 
-	vTaskDelay( 1 );
+	// no es necesario ya que lo que demora las MCP son suficientes.
+	//vTaskDelay( 1 );
 
+	// Apago
 	MCP_setLed_LogicBoard(0);			// Led placa logica
 	sbi(LED_KA_PORT, LED_KA_BIT);		// Led placa analogica ( kalive )
 
@@ -93,7 +121,7 @@ void pv_wdgInit(void)
 	// Inicializo el watchdog del micro.
 	wdt_enable(WDTO_8S);
 	wdt_reset();
-	systemWdg = WDG_CTL + WDG_CMD + WDG_DIN + WDG_OUT; //  0011 1111 = 0x3F + WDG_AIN + WDG_GPRS;
+	systemWdg = WDG_CTL + WDG_CMD + WDG_DIN + WDG_OUT + WDG_AIN; //  0011 1111 = 0x3F  + WDG_GPRS;
 	snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("Watchdog init..\r\n\0"));
 	FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
 }
@@ -111,7 +139,7 @@ static u08 l_timer = 1;
 	l_timer = 1;
 	if ( systemWdg == 0 ) {
 		wdt_reset();
-		systemWdg = WDG_CTL + WDG_CMD + WDG_DIN + WDG_OUT; //  0011 1111 = 0x3F + WDG_AIN + WDG_GPRS;
+		systemWdg = WDG_CTL + WDG_CMD + WDG_DIN + WDG_OUT + WDG_AIN; //  0011 1111 = 0x3F +  + WDG_GPRS;
 	}
 }
 //------------------------------------------------------------------------------------

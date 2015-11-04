@@ -26,18 +26,26 @@ static void pv_pollDcd(void);
 
 char dIn_printfBuff[CHAR64];	// Buffer de impresion
 dinData_t digIn;				// Estructura local donde cuento los pulsos.
+static struct {
+	s08 serviceMode;
+	s08 msgReload;
+} D_flags;
 
 /*------------------------------------------------------------------------------------*/
 void tkDigitalIn(void * pvParameters)
 {
 
 ( void ) pvParameters;
+BaseType_t xResult;
+uint32_t ulNotifiedValue;
 
 	// Los pines del micro que resetean los latches de caudal son salidas.
 	sbi(Q_DDR, Q0_CTL_PIN);
 	sbi(Q_DDR, Q1_CTL_PIN);
 
-	vTaskDelay( ( TickType_t)( 500 / portTICK_RATE_MS ) );
+	while ( !startTask )
+		vTaskDelay( ( TickType_t)( 100 / portTICK_RATE_MS ) );
+
 	snprintf_P( dIn_printfBuff,sizeof(dIn_printfBuff),PSTR("starting tkDigitalIn..\r\n\0"));
 	FreeRTOS_write( &pdUART1, dIn_printfBuff, sizeof(dIn_printfBuff) );
 
@@ -51,13 +59,37 @@ void tkDigitalIn(void * pvParameters)
 	// Inicializo el valor del dcd.
 	MCP_queryDcd(&systemVars.dcd);
 
+	D_flags.msgReload = FALSE;
+	D_flags.serviceMode = FALSE;
+
 	for( ;; )
 	{
 		u_clearWdg(WDG_DIN);
-		vTaskDelay( ( TickType_t)( 100 / portTICK_RATE_MS ) );
-		pv_pollDcd();
-		pv_pollQ();
 
+		// Espero hasta 100ms por un mensaje.
+		xResult = xTaskNotifyWait( 0x00, ULONG_MAX, &ulNotifiedValue, ((TickType_t) 100 / portTICK_RATE_MS ) );
+		// Si llego un mensaje, prendo la flag correspondiente.
+		if ( xResult == pdTRUE ) {
+			if ( ( ulNotifiedValue & TKD_PARAM_RELOAD ) != 0 ) {
+				// Mensaje de reload configuration.
+				D_flags.msgReload = TRUE;
+			}
+		}
+
+		// Mensaje de cabio de configuracion. Releo la misma
+		if ( D_flags.msgReload ) {
+			D_flags.msgReload = FALSE;
+			if ( systemVars.wrkMode != WK_NORMAL ) {
+				D_flags.serviceMode = TRUE;
+			}
+		}
+
+		// Solo poleo las entradas en modo normal. En modo service no para
+		// poder manejarlas por los comandos de servicio.
+		if ( ! D_flags.serviceMode) {
+			pv_pollDcd();
+			pv_pollQ();
+		}
 	}
 
 }
@@ -118,11 +150,11 @@ u32 tickCount;
 		if (din1 == 0 ) { digIn.pulses[1]++ ; debugQ = TRUE;}
 	} else {
 		snprintf_P( dIn_printfBuff,sizeof(dIn_printfBuff),PSTR("tkDigitalIn: READ DIN ERROR !!\r\n\0"));
-		FreeRTOS_write( &pdUART1, dIn_printfBuff, sizeof(dIn_printfBuff) );
+		if ( (systemVars.debugLevel & D_DIGITAL) != 0 ) {
+			FreeRTOS_write( &pdUART1, dIn_printfBuff, sizeof(dIn_printfBuff) );
+		}
+		goto quit;
 	}
-
-	// Siempre borro los latches para evitar la posibilidad de quedar colgado.
-	pv_clearQ();
 
 	if ( ((systemVars.debugLevel & D_DIGITAL) != 0) && debugQ ) {
 		tickCount = xTaskGetTickCount();
@@ -130,15 +162,22 @@ u32 tickCount;
 		FreeRTOS_write( &pdUART1, dIn_printfBuff, sizeof(dIn_printfBuff) );
 	}
 
+quit:
+	// Siempre borro los latches para evitar la posibilidad de quedar colgado.
+	pv_clearQ();
+	return;
+
 }
 /*------------------------------------------------------------------------------------*/
 static void pv_clearQ(void)
 {
-	// Pongo un pulso 0->1 en Q0/Q1 pin para resetear el latch
+	// Pongo un pulso 1->0->1 en Q0/Q1 pin para resetear el latch
 	// En reposo debe quedar en H.
 	cbi(Q_PORT, Q0_CTL_PIN);
 	cbi(Q_PORT, Q1_CTL_PIN);
 	taskYIELD();
+	//_delay_us(5);
+	//asm("nop");
 	sbi(Q_PORT, Q0_CTL_PIN);
 	sbi(Q_PORT, Q1_CTL_PIN);
 }

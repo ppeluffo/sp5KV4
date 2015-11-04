@@ -9,7 +9,7 @@
 
 #include "sp5KV3.h"
 
-static void initMPU(void);
+static void pv_initMPU(void);
 
 //------------------------------------------------------------------------------------
 int main(void)
@@ -38,27 +38,40 @@ unsigned int i,j;
 
 	//----------------------------------------------------------------------------------------
 
-	initMPU();
+	pv_initMPU();
 	//FreeRTOS_open(pUART0,0);
 	FreeRTOS_open(pUART1, ( UART_RXFIFO + UART_TXQUEUE ));
 	FreeRTOS_open(pI2C, 0);
 
-	/* Creo las tareas */
+	/* Arranco el RTOS. */
+	startTask = FALSE;
+
+	// Creo los semaforos
+	sem_SYSVars = xSemaphoreCreateMutex();
+
+	// Inicializacion de modulos de las tareas que deben hacerce antes
+	// de arrancar el FRTOS
+	tkOutputInit();
+	tkAnalogInit();
+
+	// Creo las tasks
 	xTaskCreate(tkCmd, "CMD", tkCmd_STACK_SIZE, NULL, tkCmd_TASK_PRIORITY,  &xHandle_tkCmd);
+	xTaskCreate(tkDigitalIn, "DIN", tkDigitalIn_STACK_SIZE, NULL, tkDigitalIn_TASK_PRIORITY,  &xHandle_tkDigitalIn);
+	xTaskCreate(tkOutput, "OUT", tkOutput_STACK_SIZE, NULL, tkOutput_TASK_PRIORITY,  &xHandle_tkOutput);
+	xTaskCreate(tkControl, "CTL", tkControl_STACK_SIZE, NULL, tkControl_TASK_PRIORITY,  &xHandle_tkControl);
+	xTaskCreate(tkAnalogIn, "AIN", tkAIn_STACK_SIZE, NULL, tkAIn_TASK_PRIORITY,  &xHandle_tkAIn);
 
 	/* Arranco el RTOS. */
 	vTaskStartScheduler();
 
-	return 0;
+	// En caso de panico, aqui terminamos.
+	exit (1);
+	//return 0;
 }
 /*------------------------------------------------------------------------------------*/
-static void initMPU(void)
+static void pv_initMPU(void)
 {
-	sbi(LED_KA_DDR, LED_KA_BIT);		// El pin del led de KA ( PD6 ) es una salida.
-	sbi(LED_MODEM_DDR, LED_MODEM_BIT);	// El pin del led de KA ( PD6 ) es una salida.
-	// inicialmente los led quedan en 0
-	sbi(LED_KA_PORT, LED_KA_BIT);
-	sbi(LED_MODEM_PORT, LED_MODEM_BIT);
+
 }
 /*------------------------------------------------------------------------------------*/
 void vApplicationIdleHook( void )
