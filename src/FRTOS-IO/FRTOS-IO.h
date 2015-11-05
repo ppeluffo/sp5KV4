@@ -79,10 +79,10 @@ portBASE_TYPE FreeRTOS_ioctl( Peripheral_Descriptor_t const xPeripheral, uint32_
 // Defino el tamanio de los buffers
 // La UART0 es la que tiene el modem
 #define  UART0_RXBUFFER_LEN ( ( u16 ) ( 64 ))
-#define  UART0_TXBUFFER_LEN ( ( u08 ) ( 128 ))
+#define  UART0_TXBUFFER_LEN ( ( u08 ) ( 64 ))
 
 // La UART1 es la de la terminal RS232
-#define  UART1_RXBUFFER_LEN ( ( u08 ) ( 64 ))
+#define  UART1_RXBUFFER_LEN ( ( u08 ) ( 128 ))
 #define  UART1_TXBUFFER_LEN ( ( u08 ) ( 128 ))
 
 typedef struct {
@@ -133,8 +133,8 @@ portBASE_TYPE FreeRTOS_I2C_ioctl( Peripheral_Descriptor_t pxPeripheral, uint32_t
 #define ioctlRELEASE_BUS_SEMPH		5
 
 #define ioctlSET_TIMEOUT			6
-#define ioctlCLEAR_RX_BUFFER		7
-#define ioctlCLEAR_TX_BUFFER		8
+#define ioctl_UART_CLEAR_RX_BUFFER	7
+#define ioctl_UART_CLEAR_TX_BUFFER	8
 
 #define ioctl_I2C_SET_DEVADDRESS			10
 #define ioctl_I2C_SET_BYTEADDRESS			11

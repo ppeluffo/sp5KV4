@@ -92,6 +92,9 @@ UART_device_control_t *pxNewUart;
 		// RX
 		switch ( pxNewUart->rxBufferType ) {
 		case QUEUE:
+			// Las queue no pueden ser mayores a 256 bytes.
+			if ( pxNewUart->rxBufferLength > 0xFF )
+				pxNewUart->rxBufferLength = 0xFF;
 			pxNewUart->rxStruct = xQueueCreate( pxNewUart->rxBufferLength, ( unsigned portBASE_TYPE ) sizeof( signed portCHAR ) );
 			break;
 		case FIFO:
@@ -101,6 +104,9 @@ UART_device_control_t *pxNewUart;
 		// TX
 		switch ( pxNewUart->txBufferType ) {
 		case QUEUE:
+			// Las queue no pueden ser mayores a 256 bytes.
+			if ( pxNewUart->txBufferLength > 0xFF )
+				pxNewUart->txBufferLength = 0xFF;
 			pxNewUart->txStruct = xQueueCreate( pxNewUart->txBufferLength, ( unsigned portBASE_TYPE ) sizeof( signed portCHAR ) );
 			break;
 		case FIFO:
@@ -116,6 +122,9 @@ UART_device_control_t *pxNewUart;
 		// RX
 		switch ( pxNewUart->rxBufferType  ) {
 		case QUEUE:
+			// Las queue no pueden ser mayores a 256 bytes.
+			if ( pxNewUart->rxBufferLength > 0xFF )
+				pxNewUart->rxBufferLength = 0xFF;
 			pxNewUart->rxStruct = xQueueCreate( pxNewUart->rxBufferLength, ( unsigned portBASE_TYPE ) sizeof( signed portCHAR ) );
 			break;
 		case FIFO:
@@ -124,6 +133,9 @@ UART_device_control_t *pxNewUart;
 		// TX
 		switch ( pxNewUart->txBufferType ) {
 		case QUEUE:
+			// Las queue no pueden ser mayores a 256 bytes.
+			if ( pxNewUart->txBufferLength > 0xFF )
+				pxNewUart->txBufferLength = 0xFF;
 			pxNewUart->txStruct = xQueueCreate( pxNewUart->txBufferLength, ( unsigned portBASE_TYPE ) sizeof( signed portCHAR ) );
 			break;
 		case FIFO:
@@ -176,10 +188,10 @@ UART_device_control_t *pUart;
 	// Trasmito.
 	// Espero que halla lugar en la cola de trasmision. ( La uart se va limpiando al trasmitir )
 	if ( pUart->txBufferType == QUEUE ) {
-		while  ( uxQueueSpacesAvailable( pUart->txStruct ) < xBytes )
+		while  ( uxQueueSpacesAvailable( pUart->txStruct ) < bytes2tx )
 			taskYIELD();
 	} else {
-		while  ( uxFifoSpacesAvailable( pUart->txStruct ) < xBytes )
+		while  ( uxFifoSpacesAvailable( pUart->txStruct ) < bytes2tx )
 			taskYIELD();
 	}
 
@@ -275,14 +287,14 @@ UART_device_control_t *pUart;
 		case ioctlSET_TIMEOUT:
 			pxPeripheralControl->xBlockTime = pvValue;	// REVISAR
 			break;
-		case ioctlCLEAR_RX_BUFFER:
+		case ioctl_UART_CLEAR_RX_BUFFER:
 			if ( pUart->rxBufferType == QUEUE) {
 				xQueueReset(pUart->rxStruct);
 			} else {
 				xFifoReset(pUart->rxStruct);
 			}
 			break;
-		case ioctlCLEAR_TX_BUFFER:
+		case ioctl_UART_CLEAR_TX_BUFFER:
 			if ( pUart->txBufferType == QUEUE) {
 				xQueueReset(pUart->txStruct);
 			} else {

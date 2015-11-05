@@ -374,8 +374,8 @@ StatBuffer_t pxFFStatBuffer;
 	/* Timers */
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  timerPoll [%ds]: %d\r\n\0"),systemVars.timerPoll, u_readTimeToNextPoll() );
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
-//	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  timerDial: %lu | %lu\r\n\0"), systemVars.timerDial, getTimeToNextDial() );
-//	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
+	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  timerDial: [%lu]: %lu\r\n\0"), systemVars.timerDial, u_readTimeToNextDial() );
+	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 
 	/* DebugLevel */
 	pos = snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  debugLevel: "));

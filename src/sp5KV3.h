@@ -255,11 +255,16 @@ void u_setConsignaNocturna ( u16 ms_pulso );
 void u_readAnalogFrame (frameData_t *dFrame);
 s16 u_readTimeToNextPoll(void);
 
+s32 u_readTimeToNextDial(void);
+s08 u_modemPrendido(void);
+
 //------------------------------------------------------------------------------------
 // PANIC CODES
 #define P_OUT_TIMERSTART	1
 #define P_OUT_TIMERCREATE	2
 #define P_AIN_TIMERSTART	3
+#define P_GPRS_TIMERSTART	4
+
 //------------------------------------------------------------------------------------
 // WATCHDOG
 u08 systemWdg;

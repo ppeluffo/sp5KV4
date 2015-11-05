@@ -237,7 +237,7 @@ static void pv_AINfsm(void)
 
 	default:
 		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("tkAnalogIn::ERROR state NOT DEFINED..\r\n\0"));
-		FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
+		FreeRTOS_write( &pdUART1, aIn_printfBuff,sizeof(aIn_printfBuff) );
 		tkAIN_state  = tkdST_INIT;
 		break;
 
@@ -412,7 +412,7 @@ u16 D;
 u08 channel;
 u16 pos = 0;
 size_t bWrite;
-StatBuffer_t pxFFStatBuffer;;
+StatBuffer_t pxFFStatBuffer;
 
 	//  En modo discreto debo apagar sensores
 	if ( (systemVars.pwrMode == PWR_DISCRETO ) && ( systemVars.wrkMode == WK_NORMAL )) {

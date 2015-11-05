@@ -59,8 +59,6 @@ BaseType_t xFifoSendFromISR( fifoHandle_t xFifo,const char *cChar, TickType_t xT
 BaseType_t xFifoReceive( fifoHandle_t xFifo,char *cChar, TickType_t xTicksToWait );
 BaseType_t xFifoReceiveFromISR( fifoHandle_t xFifo, char *cChar, TickType_t xTicksToWait );
 BaseType_t xFifoReset( fifoHandle_t xFifo );
-UBaseType_t uxFifoSpacesAvailable( fifoHandle_t xFifo );
-
-char *getGprsRxBufferPtr(void);
+size_t uxFifoSpacesAvailable( fifoHandle_t xFifo );
 
 #endif /* SRC_SP5KDRIVERS_SP5K_UART_H_ */

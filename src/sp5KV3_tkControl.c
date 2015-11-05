@@ -59,6 +59,10 @@ StatBuffer_t pxFFStatBuffer;
 	// Habilito arrancar las otras tareas
 	startTask = TRUE;
 
+	// Inicializo el watchdog del micro.
+	wdt_enable(WDTO_8S);
+	wdt_reset();
+
 	 // Initialise the xLastWakeTime variable with the current time.
 	 xLastWakeTime = xTaskGetTickCount();
 
@@ -105,6 +109,9 @@ static u08 l_timer = 1;
 	// Prendo
 	MCP_setLed_LogicBoard(1);		// Led placa logica
 	cbi(LED_KA_PORT, LED_KA_BIT);	// Led placa analogica ( kalive )
+	// ModemLed placa superior.
+	if (u_modemPrendido() )
+		cbi(LED_MODEM_PORT, LED_MODEM_BIT);
 
 	// no es necesario ya que lo que demora las MCP son suficientes.
 	//vTaskDelay( 1 );
@@ -112,15 +119,13 @@ static u08 l_timer = 1;
 	// Apago
 	MCP_setLed_LogicBoard(0);			// Led placa logica
 	sbi(LED_KA_PORT, LED_KA_BIT);		// Led placa analogica ( kalive )
+	sbi(LED_MODEM_PORT, LED_MODEM_BIT);
 
 }
 //------------------------------------------------------------------------------------
 void pv_wdgInit(void)
 {
-	// Inicializo el watchdog del micro.
-	wdt_enable(WDTO_8S);
-	wdt_reset();
-	systemWdg = WDG_CTL + WDG_CMD + WDG_DIN + WDG_OUT + WDG_AIN; // + WDG_GPRS;
+	systemWdg = WDG_CTL + WDG_CMD + WDG_DIN + WDG_OUT + WDG_AIN + WDG_GPRS;
 	snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("Watchdog init..\r\n\0"));
 	FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
 }
@@ -138,7 +143,7 @@ static u08 l_timer = 1;
 	l_timer = 1;
 	if ( systemWdg == 0 ) {
 		wdt_reset();
-		systemWdg = WDG_CTL + WDG_CMD + WDG_DIN + WDG_OUT + WDG_AIN; // + WDG_GPRS;
+		systemWdg = WDG_CTL + WDG_CMD + WDG_DIN + WDG_OUT + WDG_AIN + WDG_GPRS;
 	}
 }
 //------------------------------------------------------------------------------------

@@ -359,7 +359,7 @@ UART_device_control_t *pUart;
 	}
 }
 /*------------------------------------------------------------------------------------*/
-UBaseType_t uxFifoSpacesAvailable( fifoHandle_t xFifo )
+size_t uxFifoSpacesAvailable( fifoHandle_t xFifo )
 {
 
 fifo_handle_s *pxFifo = xFifo;
@@ -367,7 +367,3 @@ fifo_handle_s *pxFifo = xFifo;
 	return( pxFifo->length - pxFifo->uxMessageWaiting);
 }
 /*------------------------------------------------------------------------------------*/
-char *getGprsRxBufferPtr(void)
-{
-	return(NULL);
-}
