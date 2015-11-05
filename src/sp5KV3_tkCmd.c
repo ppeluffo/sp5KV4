@@ -1007,6 +1007,10 @@ quit:
 		while ( xTaskNotify(xHandle_tkAIn, TKA_PARAM_RELOAD , eSetBits ) != pdPASS ) {
 			vTaskDelay( ( TickType_t)( 100 / portTICK_RATE_MS ) );
 		}
+		// tk_Gprs:
+		while ( xTaskNotify(xHandle_tkGprs, TKG_PARAM_RELOAD , eSetBits ) != pdPASS ) {
+			vTaskDelay( ( TickType_t)( 100 / portTICK_RATE_MS ) );
+		}
 	}
 
 	return(retS);

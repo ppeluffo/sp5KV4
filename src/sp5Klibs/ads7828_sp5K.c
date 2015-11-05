@@ -29,7 +29,7 @@ s08 retS = FALSE;
 	// do conversion
 	// Armo el COMMAND BYTE
 	ads7828CmdByte = ads7828Channel & 0xF0;	// SD=1 ( single end inputs )
-	ads7828CmdByte |= ADS7828_CMD_PDMODE3;	// Internal reference ON, A/D converter ON
+	ads7828CmdByte |= ADS7828_CMD_PDMODE2;	// Internal reference ON, A/D converter ON
 
 	// start conversion on requested channel
 	// Lo primero es obtener el semaforo

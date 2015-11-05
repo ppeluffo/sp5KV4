@@ -124,6 +124,7 @@ i2c_quit:
 
 	// Pass5) STOP
 	pvI2C_sendStop();
+	vTaskDelay( ( TickType_t)( 20 / portTICK_RATE_MS ) );
 
 	// En caso de error libero la interface.
 	if (retV == FALSE)
@@ -136,6 +137,8 @@ i2c_quit:
 //------------------------------------------------------------------------------------
 s08 I2C_masterRead  ( const u08 devAddress, const u08 devAddressLength, const u16 byteAddress, char *pvBuffer, size_t xBytes  )
 {
+	// En el caso del ADC, el read no lleva la parte de mandar la SLA+W. !!!!!
+
 u08 tryes = 0;
 u08 i2c_status;
 char txbyte;
@@ -162,6 +165,10 @@ i2c_retry:
 #endif
 	if ( i2c_status == TW_MT_ARB_LOST) goto i2c_retry;
 	if ( (i2c_status != TW_START) && (i2c_status != TW_REP_START) ) goto i2c_quit;
+
+	// En el caso del ADC, el read no lleva la parte de mandar la SLA+W. !!!!!
+	if ( devAddress == ADS7828_ADDR)
+		goto SRL_R;
 
 	// Pass2) (SLA_W) Send slave address. Debo recibir 0x18 ( SLA_ACK )
 	txbyte = devAddress | TW_WRITE;
@@ -219,6 +226,7 @@ i2c_retry:
 	if (i2c_status == TW_MT_ARB_LOST) goto i2c_retry;
 	if ( (i2c_status != TW_START) && (i2c_status != TW_REP_START) ) goto i2c_quit;
 
+SRL_R:
 	// Pass5) (SLA_R) Send slave address + READ. Debo recibir un 0x40 ( SLA_R ACK)
 	txbyte = devAddress | TW_READ;
 	pvI2C_sendByte(txbyte);

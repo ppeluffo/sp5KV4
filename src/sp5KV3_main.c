@@ -53,6 +53,7 @@ unsigned int i,j;
 	// de arrancar el FRTOS
 	tkOutputInit();
 	tkAnalogInit();
+	tkGprsInit();
 
 	// Creo las tasks
 	xTaskCreate(tkCmd, "CMD", tkCmd_STACK_SIZE, NULL, tkCmd_TASK_PRIORITY,  &xHandle_tkCmd);
@@ -60,6 +61,7 @@ unsigned int i,j;
 	xTaskCreate(tkOutput, "OUT", tkOutput_STACK_SIZE, NULL, tkOutput_TASK_PRIORITY,  &xHandle_tkOutput);
 	xTaskCreate(tkControl, "CTL", tkControl_STACK_SIZE, NULL, tkControl_TASK_PRIORITY,  &xHandle_tkControl);
 	xTaskCreate(tkAnalogIn, "AIN", tkAIn_STACK_SIZE, NULL, tkAIn_TASK_PRIORITY,  &xHandle_tkAIn);
+//	xTaskCreate(tkGprs, "GPRS", tkGprs_STACK_SIZE, NULL, tkGprs_TASK_PRIORITY,  &xHandle_tkGprs);
 
 	/* Arranco el RTOS. */
 	vTaskStartScheduler();

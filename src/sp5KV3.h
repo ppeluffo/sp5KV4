@@ -55,7 +55,7 @@
 // DEFINICION DEL TIPO DE SISTEMA
 //----------------------------------------------------------------------------
 #define SP5K_REV "3.0.5"
-#define SP5K_DATE "@ 20151102"
+#define SP5K_DATE "@ 20151105"
 
 #define SP5K_MODELO "sp5KV3 HW:avr1284P R5.0"
 #define SP5K_VERSION "FW:FRTOS8"
@@ -92,6 +92,7 @@ void tkOutputInit(void);
 void tkAnalogIn(void * pvParameters);
 void tkAnalogInit(void);
 void tkGprs(void * pvParameters);
+void tkGprsInit(void);
 
 TaskHandle_t xHandle_tkCmd, xHandle_tkControl, xHandle_tkDigitalIn, xHandle_tkAIn, xHandle_tkGprs,xHandle_tkOutput;
 
@@ -101,7 +102,7 @@ s08 startTask;
 #define TKA_PARAM_RELOAD		0x01	// to tkAnalogIN: reload
 #define TKA_READ_FRAME			0x02	// to tkAnalogIN: (mode service) read a frame
 #define TKD_PARAM_RELOAD		0x01	// to tkDigitalIN: reload
-
+#define TKG_PARAM_RELOAD		0x01	// to tkGprsIN: reload
 //------------------------------------------------------------------------------------
 
 xSemaphoreHandle sem_SYSVars;

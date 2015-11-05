@@ -86,6 +86,13 @@ size_t xReturn = 0U;
 
 		mark = FCB.ff_buffer[sizeof(FCB.ff_buffer) - 1];
 
+#ifdef DEBUG_FF
+		if ( mark == 0xC5 ) {
+			snprintf_P( debug_printfBuff,sizeof(debug_printfBuff),PSTR("FO: [%d][%d][%d][%d][0X%03x]\r\n\0"),xPos, val,FF_RECD_SIZE, xReturn, mark);
+			FreeRTOS_write( &pdUART1, debug_printfBuff, sizeof(debug_printfBuff) );
+		}
+#endif
+
 		// busco transiciones:
 		if ( ( mark_Z == '\0') && ( mark == 0xC5) ) {
 			// Tengo una transicion VACIO->DATO.
@@ -161,6 +168,7 @@ size_t FF_fwrite( const void *pvBuffer, size_t xSize)
 
 u16 val = 0;
 size_t xReturn = 0U;
+u16 tryes;
 
 	// Lo primero es obtener el semaforo del I2C
 	FreeRTOS_ioctl(&pdI2C,ioctlOBTAIN_BUS_SEMPH, NULL);
@@ -193,8 +201,25 @@ size_t xReturn = 0U;
 	// y direccion interna en la EE.(comienzo del registro / frontera)
 	val = FF_ADDR_START + FCB.ff_stat.WRptr * FF_RECD_SIZE;
 	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
+
 	// Por ultimo escribo la memoria. Escribo un pagina entera, 64 bytes.
-	xReturn = FreeRTOS_write(&pdI2C, &FCB.ff_buffer, FF_RECD_SIZE);
+
+	for ( tryes = 0; tryes < 3; tryes++ ) {
+		// Write
+		xReturn = FreeRTOS_write(&pdI2C, &FCB.ff_buffer, FF_RECD_SIZE);
+		taskYIELD();
+		// Verify
+		FreeRTOS_read(&pdI2C, &FCB.check_buffer, FF_RECD_SIZE);
+		if ( memcmp (&FCB.check_buffer, &FCB.ff_buffer, FF_RECD_SIZE) == 0 )
+			break;
+		if  ( tryes == 3 ) {
+			snprintf_P( debug_printfBuff,sizeof(debug_printfBuff),PSTR("FFWR ERR: [%d]\r\n\0"), val);
+			FreeRTOS_write( &pdUART1, debug_printfBuff, sizeof(debug_printfBuff) );
+			FCB.ff_stat.errno = pdFF_ERRNO_MEMWR;
+			xReturn = 0U;
+			goto quit;
+		}
+	}
 
 	if (xReturn != FF_RECD_SIZE ) {
 		// Errores de escritura ?
@@ -368,6 +393,7 @@ s08 FF_rewind(void)
 	// funcion SOLO debe usarse desde CMD.
 
 u16 val = 0;
+u16 tryes;
 u16 xPos;
 
 	wdt_reset();
@@ -391,15 +417,27 @@ u16 xPos;
 		// direccion interna en la EE.(comienzo del registro / frontera)
 		val = FF_ADDR_START + xPos * FF_RECD_SIZE;
 		FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
-		// Escribo un pagina entera, 64 bytes con los '\0'
-		FreeRTOS_write(&pdI2C, &FCB.ff_buffer, FF_RECD_SIZE);
+
+		for ( tryes = 0; tryes < 3; tryes++ ) {
+			// Borro: escribo un pagina entera, 64 bytes con los '\0'
+			FreeRTOS_write(&pdI2C, &FCB.ff_buffer, FF_RECD_SIZE);
+			taskYIELD();
+			// Leo y verifico
+			FreeRTOS_read(&pdI2C, &FCB.check_buffer, FF_RECD_SIZE);
+			if ( memcmp (&FCB.check_buffer, &FCB.ff_buffer, FF_RECD_SIZE) == 0 )
+				break;
+			if  ( tryes == 3 ) {
+				snprintf_P( debug_printfBuff,sizeof(debug_printfBuff),PSTR("FFrew ERR: %d,%d\r\n\0"),xPos, val);
+				FreeRTOS_write( &pdUART1, debug_printfBuff, sizeof(debug_printfBuff) );
+			}
+
+		}
 		// Imprimo realimentacion c/32 recs.
 		if ( (xPos % 32) == 0 ) {
 			FreeRTOS_write( &pdUART1, ".\0", sizeof(".\0") );
-			taskYIELD();
 		}
 	}
-
+	FreeRTOS_write( &pdUART1, "\r\n\0", sizeof("\r\n\0") );
 	FreeRTOS_ioctl(&pdI2C,ioctlRELEASE_BUS_SEMPH, NULL);
 	// RESET
 	wdt_enable(WDTO_30MS);

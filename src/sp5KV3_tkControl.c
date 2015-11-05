@@ -8,7 +8,6 @@
  *  - Recibe un mensaje del timer del led para indicar si debe prender o apagarlo.
  */
 
-
 #include <sp5KV3.h>
 
 static char ctl_printfBuff[CHAR64];
@@ -40,17 +39,17 @@ StatBuffer_t pxFFStatBuffer;
 	if ( pxFFStatBuffer.errno != pdFF_ERRNO_NONE ) {
 		snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("FSInit ERROR (%d)[%d]\r\n\0"),ffRcd, pxFFStatBuffer.errno);
 	} else {
-		snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("FSInit OK\r\nwrPtr=%d,rdPtr=%d,delPtr=%d,4wr=%d,4rd=%d,4del=%d\r\n\0"),pxFFStatBuffer.WRptr,pxFFStatBuffer.RDptr, pxFFStatBuffer.DELptr,pxFFStatBuffer.rcds4wr,pxFFStatBuffer.rcds4rd,pxFFStatBuffer.rcds4del);
+		snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("FSInit OK\r\n wrPtr=%d,rdPtr=%d,delPtr=%d,4wr=%d,4rd=%d,4del=%d\r\n\0"),pxFFStatBuffer.WRptr,pxFFStatBuffer.RDptr, pxFFStatBuffer.DELptr,pxFFStatBuffer.rcds4wr,pxFFStatBuffer.rcds4rd,pxFFStatBuffer.rcds4del);
 	}
 	FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
 
 	// load systemVars
 	if  ( u_loadSystemParams() == TRUE ) {
-		snprintf_P( ctl_printfBuff,CHAR64,PSTR("Load config OK.\r\n\0") );
+		snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("Load config OK.\r\n\0") );
 	} else {
 		u_loadDefaults();
 		u_saveSystemParams();
-		snprintf_P( ctl_printfBuff,CHAR64,PSTR("Load config ERROR: defaults !!\r\n\0") );
+		snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("Load config ERROR: defaults !!\r\n\0") );
 	}
 	FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
 
@@ -121,7 +120,7 @@ void pv_wdgInit(void)
 	// Inicializo el watchdog del micro.
 	wdt_enable(WDTO_8S);
 	wdt_reset();
-	systemWdg = WDG_CTL + WDG_CMD + WDG_DIN + WDG_OUT + WDG_AIN; //  0011 1111 = 0x3F  + WDG_GPRS;
+	systemWdg = WDG_CTL + WDG_CMD + WDG_DIN + WDG_OUT + WDG_AIN; // + WDG_GPRS;
 	snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("Watchdog init..\r\n\0"));
 	FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
 }
@@ -139,7 +138,7 @@ static u08 l_timer = 1;
 	l_timer = 1;
 	if ( systemWdg == 0 ) {
 		wdt_reset();
-		systemWdg = WDG_CTL + WDG_CMD + WDG_DIN + WDG_OUT + WDG_AIN; //  0011 1111 = 0x3F +  + WDG_GPRS;
+		systemWdg = WDG_CTL + WDG_CMD + WDG_DIN + WDG_OUT + WDG_AIN; // + WDG_GPRS;
 	}
 }
 //------------------------------------------------------------------------------------

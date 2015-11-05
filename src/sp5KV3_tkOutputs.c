@@ -21,7 +21,7 @@ RtcTimeType_t rtcDateTime;
 u16 now;
 s08 f_consignaCallBack;
 
-#define set__f_consignaCallBack() ( f_consignaCallBack = TRUE )
+#define set_f_consignaCallBack() ( f_consignaCallBack = TRUE )
 #define reset_f_consignaCallBack() ( f_consignaCallBack = FALSE )
 //------------------------------------------------------------------------------------
 
@@ -80,7 +80,7 @@ void tkOutputInit(void)
 //------------------------------------------------------------------------------------
 void pv_consignaTimerCallback( TimerHandle_t pxTimer )
 {
-	set__f_consignaCallBack();
+	set_f_consignaCallBack();
 
 }
 //------------------------------------------------------------------------------------

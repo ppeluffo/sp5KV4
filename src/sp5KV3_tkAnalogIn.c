@@ -20,11 +20,11 @@ typedef enum {	tkdST_INIT 		= 0,
 
 // Eventos
 typedef enum {
-	dEV00 = 0, 	// Init
-	dEV01 = 1,	// EV_MSGreload
-	dEV02 = 2,	// EV_f_start2poll
-	dEV03 = 3,	// EV_counter_secs2pwrSettleNOT_0
-	dEV04 = 4,	// EV_pollCounterNOT_0
+	evINIT = 0, 			// Init
+	evRELOADCONFIG,			// EV_MSGreload
+	evSTART2POLL,			// EV_f_start2poll
+	evSEC2PWRSETTLE_NOT_0,	// EV_counter_secs2pwrSettleNOT_0
+	evPOLLCNT_NOT_0			// EV_pollCounterNOT_0
 
 } t_tkData_eventos;
 
@@ -33,13 +33,13 @@ typedef enum {
 static s08 dEventos[dEVENT_COUNT];
 
 // transiciones
-static int trD00_fn(void);
-static int trD01_fn(void);
-static int trD02_fn(void);
-static int trD03_fn(void);
-static int trD04_fn(void);
-static int trD05_fn(void);
-static int trD06_fn(void);
+static int trD00(void);
+static int trD01(void);
+static int trD02(void);
+static int trD03(void);
+static int trD04(void);
+static int trD05(void);
+static int trD06(void);
 
 static u08 tkAIN_state = tkdST_INIT;	// Estado
 static u32 tickCount;					// para usar en los mensajes del debug.
@@ -107,6 +107,7 @@ uint32_t ulNotifiedValue;
 		xResult = xTaskNotifyWait( 0x00, ULONG_MAX, &ulNotifiedValue, ((TickType_t) 100 / portTICK_RATE_MS ) );
 		// Si llego un mensaje, prendo la flag correspondiente.
 		if ( xResult == pdTRUE ) {
+
 			if ( ( ulNotifiedValue & TKA_PARAM_RELOAD ) != 0 ) {
 				// Mensaje de reload configuration.
 				AN_flags.msgReload = TRUE;
@@ -186,19 +187,19 @@ u08 i;
 
 	// Evaluo los eventos
 	// EV00: INIT
-	if ( AN_flags.starting == TRUE ) { dEventos[dEV00] = TRUE; }
+	if ( AN_flags.starting == TRUE ) { dEventos[evINIT] = TRUE; }
 
 	// EV01: EV_MSGreload: recargar la configuracion
-	if ( AN_flags.msgReload == TRUE ) { dEventos[dEV01] = TRUE;	}
+	if ( AN_flags.msgReload == TRUE ) { dEventos[evRELOADCONFIG] = TRUE;	}
 
 	// EV02: EV_f_start2poll
-	if ( AN_flags.start2poll == TRUE ) { dEventos[dEV02] = TRUE; }
+	if ( AN_flags.start2poll == TRUE ) { dEventos[evSTART2POLL] = TRUE; }
 
 	// EV03: EV_counter_secs2pwrSettleNOT_0
-	if ( AN_counters.secs2pwrSettle != 0 ) { dEventos[dEV03] = TRUE; }
+	if ( AN_counters.secs2pwrSettle != 0 ) { dEventos[evSEC2PWRSETTLE_NOT_0] = TRUE; }
 
 	// EV04: EV_pollCounterNOT_0
-	if ( AN_counters.nroPoleos != 0 ) { dEventos[dEV04] = TRUE; }
+	if ( AN_counters.nroPoleos != 0 ) { dEventos[evPOLLCNT_NOT_0] = TRUE; }
 
 }
 /*------------------------------------------------------------------------------------*/
@@ -210,27 +211,27 @@ static void pv_AINfsm(void)
 	//
 	switch ( tkAIN_state ) {
 	case tkdST_INIT:
-		tkAIN_state = trD00_fn();	// TR00
+		tkAIN_state = trD00();	// TR00
 		break;
 
 	case tkdST_STANDBY:
-		if ( dEventos[dEV01] == TRUE  ) { tkAIN_state = trD01_fn();break; }
-		if ( dEventos[dEV02] == TRUE  ) { tkAIN_state = trD02_fn();break; }
+		if ( dEventos[evRELOADCONFIG] == TRUE  ) { tkAIN_state = trD01();break; }
+		if ( dEventos[evSTART2POLL] == TRUE  ) { tkAIN_state = trD02();break; }
 		break;
 
 	case tkdST_PWRSETTLE:
-		if ( dEventos[dEV03] == TRUE  ) {
-			tkAIN_state = trD03_fn();
+		if ( dEventos[evSEC2PWRSETTLE_NOT_0] == TRUE  ) {
+			tkAIN_state = trD03();
 		} else {
-			tkAIN_state = trD04_fn();
+			tkAIN_state = trD04();
 		}
 		break;
 
 	case tkdST_POLLING:
-		if ( dEventos[dEV04] == TRUE  ) {
-			tkAIN_state = trD05_fn();
+		if ( dEventos[evPOLLCNT_NOT_0] == TRUE  ) {
+			tkAIN_state = trD05();
 		} else {
-			tkAIN_state = trD06_fn();
+			tkAIN_state = trD06();
 		}
 		break;
 
@@ -243,7 +244,7 @@ static void pv_AINfsm(void)
 	}
 }
 /*------------------------------------------------------------------------------------*/
-static int trD00_fn(void)
+static int trD00(void)
 {
 	// Evento inicial. Solo salta al primer estado operativo.
 	// Inicializo el sistema aqui
@@ -270,7 +271,7 @@ static int trD00_fn(void)
 	return(tkdST_STANDBY);
 }
 /*------------------------------------------------------------------------------------*/
-static int trD01_fn(void)
+static int trD01(void)
 {
 	// MSG de autoreload
 	// tkdST_STANDBY->tkdST_STANDBY
@@ -294,7 +295,7 @@ static int trD01_fn(void)
 	return(tkdST_STANDBY);
 }
 /*------------------------------------------------------------------------------------*/
-static int trD02_fn(void)
+static int trD02(void)
 {
 	// tkdST_STANDBY->tkdST_PWRSETTLE
 
@@ -311,7 +312,7 @@ static int trD02_fn(void)
 	return(tkdST_PWRSETTLE);
 }
 /*------------------------------------------------------------------------------------*/
-static int trD03_fn(void)
+static int trD03(void)
 {
 	// tkdST_PWRSETTLE->tkdST_PWRSETTLE
 	// Espero 5s. que se estabilizen las fuentes.
@@ -325,7 +326,7 @@ static int trD03_fn(void)
 
 }
 /*------------------------------------------------------------------------------------*/
-static int trD04_fn(void)
+static int trD04(void)
 {
 	// tkdST_PWRSETTLE->tkdST_POLLING
 
@@ -346,7 +347,7 @@ u16 adcRetValue;
 	return(tkdST_POLLING);
 }
 /*------------------------------------------------------------------------------------*/
-static int trD05_fn(void)
+static int trD05(void)
 {
 	// tkdST_POLLING->tkdST_POLLING
 	// Poleo
@@ -355,7 +356,6 @@ u16 adcRetValue;
 
 	// Dummy convert para prender el ADC ( estabiliza la medida).
 	ADS7827_readCh0( &adcRetValue);
-
 	if ( AN_counters.nroPoleos > 0 ) {
 		vTaskDelay( ( TickType_t)( 1000 / portTICK_RATE_MS ) );
 		AN_counters.nroPoleos--;
@@ -372,28 +372,28 @@ u16 adcRetValue;
 
 	ADS7827_readCh0( &adcRetValue);	// AIN0->ADC3;
 	rAIn[0] += adcRetValue;
-	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("\tch_0,adc_3,val=%.0f,r0=%.0f\r\n\0"),(double) adcRetValue, rAIn[0]);
+	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("\tch_0,adc_3,val=%d,r0=%.0f\r\n\0"),adcRetValue, rAIn[0]);
 	if ( (systemVars.debugLevel & D_DATA) != 0) {
 		FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
 	}
 
 	ADS7827_readCh1( &adcRetValue); // AIN1->ADC5;
 	rAIn[1] += adcRetValue;
-	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("\tch_1,adc_5,val=%.0f,r1=%.0f\r\n\0"),(double) adcRetValue, rAIn[1]);
+	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("\tch_1,adc_5,val=%d,r1=%.0f\r\n\0"),adcRetValue, rAIn[1]);
 	if ( (systemVars.debugLevel & D_DATA) != 0) {
 		FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
 	}
 
-	ADS7827_readCh1( &adcRetValue); // AIN2->ADC7;
+	ADS7827_readCh2( &adcRetValue); // AIN2->ADC7;
 	rAIn[2] += adcRetValue;
-	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("\tch_2,adc_7,val=%.0f,r3=%.0f\r\n\0"),(double) adcRetValue, rAIn[2]);
+	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("\tch_2,adc_7,val=%d,r1=%.0f\r\n\0"), adcRetValue, rAIn[2]);
 	if ( (systemVars.debugLevel & D_DATA) != 0) {
 		FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
 	}
 
 	ADS7827_readBatt( &adcRetValue); // BATT->ADC1;
 	rAIn[3] += adcRetValue;
-	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("\tch_3,adc_1,val=%.0f,r3=%.0f\r\n\0"),(double) adcRetValue, rAIn[3]);
+	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("\tch_3,adc_1,val=%d,r1=%.0f\r\n\0"), adcRetValue, rAIn[3]);
 	if ( (systemVars.debugLevel & D_DATA) != 0) {
 		FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
 	}
@@ -403,7 +403,7 @@ u16 adcRetValue;
 
 }
 /*------------------------------------------------------------------------------------*/
-static int trD06_fn(void)
+static int trD06(void)
 {
 	// tkdST_POLLING->tkdST_STANDBY
 
@@ -520,7 +520,7 @@ static void pv_AINprintExitMsg(u08 code)
 {
 	if ( (systemVars.debugLevel & D_DATA) != 0) {
 		tickCount = xTaskGetTickCount();
-		snprintf_P( aIn_printfBuff,CHAR128,PSTR(".[%06lu] tkAnalogIn::exit TR%02d\r\n"), tickCount,code);
+		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::exit TR%02d\r\n"), tickCount,code);
 		FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
 	}
 }

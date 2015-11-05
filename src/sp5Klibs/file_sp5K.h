@@ -41,6 +41,7 @@ typedef struct {
 typedef struct {					// File Control Block
 	StatBuffer_t ff_stat;			// Estructura de control de archivo
 	char ff_buffer[FF_RECD_SIZE];	//
+	char check_buffer[FF_RECD_SIZE];
 } FCB_t;
 
 FCB_t FCB;

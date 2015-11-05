@@ -27,7 +27,6 @@ typedef enum {
 		pI2C
 } t_perifericos;
 
-
 //#define DEBUG_I2C
 
 /* Peripheral handles are void * for data hiding purposes. */
