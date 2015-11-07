@@ -2,7 +2,9 @@
  * Revisar porque al reinicializar el fifo, ya no veo los comandos ingresados.
  * Como afecta esto a la busqueda.
  *
- *
+ * git commit -a -m "beta 20151107 001"
+ * git remote add REM_sp5KV3-PREV https://github.com/ppeluffo/sp5K-PREV.git
+ * git push -u REM_sp5KV3-PREV master
  *
  * ----------------------------------------------------------------------------------------------------------------
  */

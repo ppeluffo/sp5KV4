@@ -39,7 +39,7 @@ StatBuffer_t pxFFStatBuffer;
 	if ( pxFFStatBuffer.errno != pdFF_ERRNO_NONE ) {
 		snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("FSInit ERROR (%d)[%d]\r\n\0"),ffRcd, pxFFStatBuffer.errno);
 	} else {
-		snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("FSInit OK\r\n wrPtr=%d,rdPtr=%d,delPtr=%d,4wr=%d,4rd=%d,4del=%d\r\n\0"),pxFFStatBuffer.WRptr,pxFFStatBuffer.RDptr, pxFFStatBuffer.DELptr,pxFFStatBuffer.rcds4wr,pxFFStatBuffer.rcds4rd,pxFFStatBuffer.rcds4del);
+		snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("FSInit OK\r\nwrPtr=%d,rdPtr=%d,delPtr=%d,4wr=%d,4rd=%d,4del=%d\r\n\0"),pxFFStatBuffer.WRptr,pxFFStatBuffer.RDptr, pxFFStatBuffer.DELptr,pxFFStatBuffer.rcds4wr,pxFFStatBuffer.rcds4rd,pxFFStatBuffer.rcds4del);
 	}
 	FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
 
