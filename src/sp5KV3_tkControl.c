@@ -10,7 +10,7 @@
 
 #include <sp5KV3.h>
 
-static char ctl_printfBuff[CHAR64];
+static char ctl_printfBuff[CHAR128];
 
 void pv_ledsInit(void);
 void pv_flashLeds(void);

@@ -176,9 +176,9 @@ BaseType_t xFifoSendFromISR( fifoHandle_t xFifo,const char *cChar, TickType_t xT
 fifo_handle_s *pxFifo = xFifo;
 s08 ret = errQUEUE_FULL;
 
-	// Si el buffer esta vacio ajusto los punteros
+	// Si el buffer esta vacio ajusto los punteros !!!
 	if( pxFifo->uxMessageWaiting == 0) {
-		//pxFifo->head = pxFifo->tail = 0;
+		pxFifo->head = pxFifo->tail = 0;
 	}
 
 	if ( pxFifo->uxMessageWaiting < pxFifo->length ) {

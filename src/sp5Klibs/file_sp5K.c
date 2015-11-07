@@ -379,7 +379,6 @@ size_t xReturn = 0U;
 		FCB.ff_stat.DELptr = (++FCB.ff_stat.DELptr == FF_MAX_RCDS) ?  0 : FCB.ff_stat.DELptr;
 	}
 
-quit:
 	// libero los semaforos
 	FreeRTOS_ioctl(&pdI2C,ioctlRELEASE_BUS_SEMPH, NULL);
 	return(xReturn);

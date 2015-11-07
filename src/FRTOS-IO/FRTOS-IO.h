@@ -106,6 +106,8 @@ size_t FreeRTOS_UART_read( Peripheral_Descriptor_t const pxPeripheral, void * co
 portBASE_TYPE FreeRTOS_UART_ioctl( Peripheral_Descriptor_t pxPeripheral, uint32_t ulRequest, void *pvValue );
 void pvFreeRTOS_UART1_writeChar (char *c);
 
+char *FreeRTOS_UART_getFifoPtr(Peripheral_Control_t *UART);
+
 //------------------------------------------------------------------------------------
 // Estructura particular de I2Cs
 //------------------------------------------------------------------------------------

@@ -117,7 +117,7 @@ static void cmdHelpFunction(void)
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR( "  wrkmode [service | monitor {sqe|frame}], pwrmode [continuo|discreto] \r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
-	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  timerpoll, timerdial, dlgid, gsmband \r\n\0"));
+	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  timerpoll, timerdial, dlgid, gsmband\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  pwrsave [modo {on|off}, {hhmm1}, {hhmm2}\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
@@ -723,7 +723,7 @@ u08 argc;
 
 	// GSMBAND:
 	// Debo estar en modo service ya que para que tome el valor debe resetearse
-	if (!strcmp_P( strupr(argv[1]), PSTR("GSMBAND\0")) && ( systemVars.wrkMode == WK_SERVICE) ) {
+	if (!strcmp_P( strupr(argv[1]), PSTR("GSMBAND\0"))) {
 		if ( argv[2] == NULL ) {
 			retS = FALSE;
 		} else {
@@ -968,8 +968,8 @@ s08 retS = FALSE;
 		p++;
 		length++;
 	}
-	snprintf_P( debug_printfBuff,sizeof(debug_printfBuff),PSTR("S=[%s](%d)\r\n\0"),s1, length);
-	FreeRTOS_write( &pdUART1, debug_printfBuff, sizeof(debug_printfBuff) );
+//	snprintf_P( debug_printfBuff,sizeof(debug_printfBuff),PSTR("S=[%s](%d)\r\n\0"),s1, length);
+//	FreeRTOS_write( &pdUART1, debug_printfBuff, sizeof(debug_printfBuff) );
 
 	retS = EE_write( (u16)(atoi(s0)), s1, length );
 	return(retS);

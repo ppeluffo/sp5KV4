@@ -318,6 +318,27 @@ void pvFreeRTOS_UART1_writeChar (char *c)
 	FreeRTOS_UART_write(&pdUART1,&c, sizeof(char));
 }
 //------------------------------------------------------------------------------------
+char *FreeRTOS_UART_getFifoPtr(Peripheral_Control_t *UART)
+{
+	// Retorna un puntero al comienzo de buffer de la fifo de una UART.
+	// Se usa para imprimir dichos buffers
+	// Funcion PELIGROSA !!!
+
+UART_device_control_t *uartDevice;
+fifo_handle_s *uartFifo;
+char *p;
+
+	uartDevice = (UART_device_control_t *) UART->phDevice;
+	if ( uartDevice->rxBufferType != FIFO )
+		return(NULL);
+
+	uartFifo = (fifo_handle_s *) uartDevice->rxStruct;
+	p = uartFifo->buff;
+	return(p);
+}
+//------------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------------
 // FUNCIONES DE I2C ( TWI)
 //------------------------------------------------------------------------------------
 portBASE_TYPE FreeRTOS_I2C_open( Peripheral_Control_t * const pxPeripheralControl, const u32 flags )
@@ -385,7 +406,7 @@ portBASE_TYPE FreeRTOS_I2C_ioctl( Peripheral_Descriptor_t pxPeripheral, uint32_t
 Peripheral_Control_t * const pxPeripheralControl = ( Peripheral_Control_t * const ) pxPeripheral;
 portBASE_TYPE xReturn = pdPASS;
 I2C_device_control_t *pI2C;
-u16 a, *p;
+u16 *p;
 
 		pI2C = pxPeripheralControl->phDevice;
 		p = pvValue;
