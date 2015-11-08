@@ -78,8 +78,8 @@ portBASE_TYPE FreeRTOS_ioctl( Peripheral_Descriptor_t const xPeripheral, uint32_
 //-----------------------------------------------------------------------
 // Defino el tamanio de los buffers
 // La UART0 es la que tiene el modem
-#define  UART0_RXBUFFER_LEN ( ( u16 ) ( 64 ))
-#define  UART0_TXBUFFER_LEN ( ( u08 ) ( 64 ))
+#define  UART0_RXBUFFER_LEN ( ( u16 ) ( 640 ))
+#define  UART0_TXBUFFER_LEN ( ( u08 ) ( 128 ))
 
 // La UART1 es la de la terminal RS232
 #define  UART1_RXBUFFER_LEN ( ( u08 ) ( 128 ))
