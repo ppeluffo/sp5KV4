@@ -5,7 +5,7 @@
  *      Author: pablo
  */
 
-#include <sp5KV3.h>
+#include "sp5KV4.h"
 
 u08 pv_paramLoad(u08* data, u08* addr, u16 sizebytes);
 u08 pv_paramStore(u08* data, u08* addr, u16 sizebytes);
@@ -257,7 +257,7 @@ int i;
 	systemVars.dcd = 0;
 	systemVars.ri = 0;
 	systemVars.termsw = 0;
-	systemVars.debugLevel = D_BASIC + D_GPRS;
+	systemVars.debugLevel = D_BASIC;
 	systemVars.wrkMode = WK_NORMAL;
 
 	// Cuando arranca si la EE no esta inicializada puede dar cualquier cosa.
@@ -378,7 +378,7 @@ u08 channel;
 	strncpy_P(systemVars.apn, PSTR("SPYMOVIL.VPNANTEL\0"),APN_LENGTH);
 
 	// DEBUG
-	systemVars.debugLevel = D_BASIC + D_GPRS;
+	systemVars.debugLevel = D_BASIC;
 
 	strncpy_P(systemVars.serverAddress, PSTR("192.168.0.9\0"),IP_LENGTH);
 	systemVars.timerPoll = 300;			// Poleo c/5 minutos
@@ -461,7 +461,7 @@ RtcTimeType_t rtcDateTime;
 
 	RTC_read(&rtcDateTime);
 	rtcDateTime.year -= 2000;
-	snprintf_P( nowStr,sizeof(nowStr), PSTR("%02d/%02d/%02d %02d:%02d\0"),rtcDateTime.day,rtcDateTime.month,rtcDateTime.year,rtcDateTime.hour,rtcDateTime.min,rtcDateTime.sec );
+	snprintf_P( nowStr,sizeof(nowStr), PSTR("%02d/%02d/%02d %02d:%02d:%02d\0"),rtcDateTime.day,rtcDateTime.month,rtcDateTime.year,rtcDateTime.hour,rtcDateTime.min,rtcDateTime.sec );
 	return(nowStr);
 }
 

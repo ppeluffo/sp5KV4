@@ -8,7 +8,7 @@
 #ifndef SRC_SP5KLIBS_EE_SP5K_H_
 #define SRC_SP5KLIBS_EE_SP5K_H_
 
-#include "sp5KV3.h"
+#include "../sp5KV4.h"
 #include "FRTOS-IO.h"
 
 //------------------------------------------------------------------------------------

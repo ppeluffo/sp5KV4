@@ -364,7 +364,7 @@ size_t xReturn = 0U;
 	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESSLENGTH, &val);
 
 	// Mientras hallan registros ya leidos y no borrados, los borro.
-	while ( FCB.ff_stat.rcds4del > FCB.ff_stat.rcds4rd ) {
+	while ( FCB.ff_stat.rcds4del > 0 ) {
 
 		// y direccion interna en la EE.(comienzo del registro / frontera)
 		val = FF_ADDR_START + FCB.ff_stat.DELptr * FF_RECD_SIZE;
@@ -382,6 +382,51 @@ size_t xReturn = 0U;
 	// libero los semaforos
 	FreeRTOS_ioctl(&pdI2C,ioctlRELEASE_BUS_SEMPH, NULL);
 	return(xReturn);
+}
+//------------------------------------------------------------------------------------
+s08 FF_del(void)
+{
+	// Borra un registro.
+	// Retorna TRUE si la memoria esta vacia ya que con esta funcion
+	// seteo la flag mem_empty4del.
+
+u16 val = 0;
+size_t xReturn = 0U;
+s08 retS = FALSE;
+
+	// Lo primero es obtener el semaforo del I2C
+	FreeRTOS_ioctl(&pdI2C,ioctlOBTAIN_BUS_SEMPH, NULL);
+	FCB.ff_stat.errno = pdFF_ERRNO_NONE;
+
+	// Voy a escribir en c/registro un registro en blanco
+	memset( FCB.ff_buffer,'\0', sizeof(FCB.ff_buffer) );
+	// Luego indicamos el periferico i2c en el cual queremos leer
+	val = EE_ADDR;
+	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_DEVADDRESS, &val);
+	// Luego indicamos la direccion a escribir del dispositivo: largo ( en la ee son 2 bytes )
+	val = 2;
+	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESSLENGTH, &val);
+
+	// SI hay algun registro ya leido y no borrado, los borro.
+	if( FCB.ff_stat.rcds4del !=  FCB.ff_stat.rcds4rd  ) {
+
+		// y direccion interna en la EE.(comienzo del registro / frontera)
+		val = FF_ADDR_START + FCB.ff_stat.DELptr * FF_RECD_SIZE;
+		FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
+		// Por ultimo escribo la memoria. Escribo un pagina entera, 64 bytes.
+		xReturn = FreeRTOS_write(&pdI2C, &FCB.ff_buffer, FF_RECD_SIZE);
+
+		// Por ahora no controlo los errores de borrado
+		// OK: Ajusto los punteros
+		FCB.ff_stat.rcds4wr++;
+		FCB.ff_stat.rcds4del--;
+		FCB.ff_stat.DELptr = (++FCB.ff_stat.DELptr == FF_MAX_RCDS) ?  0 : FCB.ff_stat.DELptr;
+		retS = TRUE;
+	}
+
+	// libero los semaforos
+	FreeRTOS_ioctl(&pdI2C,ioctlRELEASE_BUS_SEMPH, NULL);
+	return(retS);
 }
 //------------------------------------------------------------------------------------
 s08 FF_rewind(void)

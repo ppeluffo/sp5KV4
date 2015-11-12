@@ -67,6 +67,7 @@ s08 FF_truncate(void);
 s08 FF_rewind(void);
 s08 FF_seek(void);
 int FF_errno( void );
+s08 FF_del(void);
 //------------------------------------------------------------------------------------
 
 #endif /* SRC_SP5KLIBS_FILE_SP5K_H_ */

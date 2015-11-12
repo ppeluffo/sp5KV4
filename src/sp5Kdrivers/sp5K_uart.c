@@ -135,11 +135,13 @@ BaseType_t xFifoReset( fifoHandle_t xFifo )
 {
 fifo_handle_s *pxFifo;
 
+	taskENTER_CRITICAL();
 	pxFifo = xFifo;
 	pxFifo->head = 0;
 	pxFifo->tail = 0;
 	pxFifo->uxMessageWaiting = 0;
 	memset(pxFifo->buff,'\0', pxFifo->length );	// REVISAR
+	taskEXIT_CRITICAL();
 }
 /*------------------------------------------------------------------------------------*/
 BaseType_t xFifoSend( fifoHandle_t xFifo,const char *cChar, TickType_t xTicksToWait )

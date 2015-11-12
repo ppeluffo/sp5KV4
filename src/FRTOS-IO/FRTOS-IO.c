@@ -6,8 +6,8 @@
  *
  */
 
-#include <sp5KV3.h>
 #include "FRTOS-IO.h"
+#include "../sp5KV4.h"
 
 void pv_enqueue( UART_device_control_t *pUart, char *pC );
 s08 pv_queueReachHighWaterMark( UART_device_control_t *pUart);

@@ -5,8 +5,8 @@
  *      Author: pablo
  */
 
-#include <sp5KV3.h>
-#include <ads7828_sp5K.h>
+#include "ads7828_sp5K.h"
+#include "../sp5KV4.h"
 
 //------------------------------------------------------------------------------------
 s08 ADS7828_read(u08 channel, u16 *value)

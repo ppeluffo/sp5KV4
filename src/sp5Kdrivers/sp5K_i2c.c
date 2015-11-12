@@ -6,8 +6,8 @@
  */
 
 
-#include <sp5KV3.h>
 #include "sp5K_i2c.h"
+#include "../sp5KV4.h"
 
 static void pvI2C_setBitRate(int bitrateKHz);
 inline void pvI2C_sendStart(void);

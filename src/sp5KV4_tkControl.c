@@ -8,7 +8,7 @@
  *  - Recibe un mensaje del timer del led para indicar si debe prender o apagarlo.
  */
 
-#include <sp5KV3.h>
+#include "sp5KV4.h"
 
 static char ctl_printfBuff[CHAR128];
 
@@ -60,8 +60,8 @@ StatBuffer_t pxFFStatBuffer;
 	startTask = TRUE;
 
 	// Inicializo el watchdog del micro.
-	wdt_enable(WDTO_8S);
-	wdt_reset();
+//	wdt_enable(WDTO_8S);
+//	wdt_reset();
 
 	 // Initialise the xLastWakeTime variable with the current time.
 	 xLastWakeTime = xTaskGetTickCount();
