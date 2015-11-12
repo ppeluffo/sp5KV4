@@ -55,7 +55,7 @@
 // DEFINICION DEL TIPO DE SISTEMA
 //----------------------------------------------------------------------------
 #define SP5K_REV "3.0.5"
-#define SP5K_DATE "@ 20151107"
+#define SP5K_DATE "@ 20151111"
 
 #define SP5K_MODELO "sp5KV3 HW:avr1284P R5.0"
 #define SP5K_VERSION "FW:FRTOS8"
@@ -247,6 +247,9 @@ void u_clearWdg( u08 wdgId );
 s08 u_saveSystemParams(void);
 s08 u_loadSystemParams(void);
 void u_loadDefaults(void);
+char *u_now(void);
+
+char nowStr[32];
 
 #define CONSIGNA_PULSE_MS		250
 void u_setConsignaDiurna ( u16 ms_pulso );
@@ -257,6 +260,7 @@ s16 u_readTimeToNextPoll(void);
 
 s32 u_readTimeToNextDial(void);
 s08 u_modemPrendido(void);
+s08 u_wrRtc(char *s);
 
 //------------------------------------------------------------------------------------
 // PANIC CODES

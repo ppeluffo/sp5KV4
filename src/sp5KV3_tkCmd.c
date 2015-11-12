@@ -667,6 +667,12 @@ u08 argc;
 	// TIMERPOLL
 	if (!strcmp_P( strupr(argv[1]), PSTR("TIMERPOLL\0"))) {
 		retS = u_configTimerPoll(argv[2]);
+
+		// tk_aIn: notifico en modo persistente. Si no puedo, me voy a resetear por watchdog. !!!!
+		while ( xTaskNotify(xHandle_tkAIn, TKA_PARAM_RELOAD , eSetBits ) != pdPASS ) {
+			vTaskDelay( ( TickType_t)( 100 / portTICK_RATE_MS ) );
+		}
+
 		retS ? pv_snprintfP_OK() : 	pv_snprintfP_ERR();
 		return;
 	}
@@ -674,6 +680,12 @@ u08 argc;
 	// TIMERDIAL
 	if (!strcmp_P( strupr(argv[1]), PSTR("TIMERDIAL\0"))) {
 		retS = u_configTimerDial(argv[2]);
+
+		// tk_Gprs:
+		while ( xTaskNotify(xHandle_tkGprs, TKG_PARAM_RELOAD , eSetBits ) != pdPASS ) {
+			vTaskDelay( ( TickType_t)( 100 / portTICK_RATE_MS ) );
+		}
+
 		retS ? pv_snprintfP_OK() : 	pv_snprintfP_ERR();
 		return;
 	}
@@ -702,7 +714,7 @@ u08 argc;
 
 	// RTC
 	if (!strcmp_P( strupr(argv[1]), PSTR("RTC\0"))) {
-		retS = pv_cmdWrRtc(argv[2]);
+		retS = u_wrRtc(argv[2]);
 		retS ? pv_snprintfP_OK() : 	pv_snprintfP_ERR();
 		return;
 	}
@@ -1103,39 +1115,6 @@ s08 pv_cmdWrDebugLevel(u08 *s)
 	return(FALSE);
 }
 /*------------------------------------------------------------------------------------*/
-s08 pv_cmdWrRtc(u08 *s)
-{
-u08 dateTimeStr[11];
-char tmp[3];
-s08 retS;
-RtcTimeType_t rtcDateTime;
-
-
-	/* YYMMDDhhmm */
-	if ( s == NULL )
-		return(FALSE);
-
-	memcpy(dateTimeStr, s, 10);
-	// year
-	tmp[0] = dateTimeStr[0]; tmp[1] = dateTimeStr[1];	tmp[2] = '\0';
-	rtcDateTime.year = atoi(tmp);
-	// month
-	tmp[0] = dateTimeStr[2]; tmp[1] = dateTimeStr[3];	tmp[2] = '\0';
-	rtcDateTime.month = atoi(tmp);
-	// day of month
-	tmp[0] = dateTimeStr[4]; tmp[1] = dateTimeStr[5];	tmp[2] = '\0';
-	rtcDateTime.day = atoi(tmp);
-	// hour
-	tmp[0] = dateTimeStr[6]; tmp[1] = dateTimeStr[7];	tmp[2] = '\0';
-	rtcDateTime.hour = atoi(tmp);
-	// minute
-	tmp[0] = dateTimeStr[8]; tmp[1] = dateTimeStr[9];	tmp[2] = '\0';
-	rtcDateTime.min = atoi(tmp);
-
-	retS = RTC_write(&rtcDateTime);
-	return(retS);
-}
-/*------------------------------------------------------------------------------------*/
 void pv_cmdRdRTC(void)
 {
 RtcTimeType_t rtcDateTime;
@@ -1335,8 +1314,8 @@ u08 pos, channel;
 		for ( channel = 0; channel < NRO_CHANNELS; channel++) {
 			pos += snprintf_P( &cmd_printfBuff[pos], ( sizeof(cmd_printfBuff) - pos ), PSTR("%s=%.2f,"),systemVars.aChName[channel],Aframe.analogIn[channel] );
 		}
-		pos += snprintf_P( &cmd_printfBuff[pos], ( sizeof(cmd_printfBuff) - pos ), PSTR("%sP=%.2f,%sL=%d,"), systemVars.dChName[0],Aframe.dIn.pulses[0],systemVars.dChName[0],Aframe.dIn.level[0],systemVars.dChName[0]);
-		pos += snprintf_P( &cmd_printfBuff[pos], ( sizeof(cmd_printfBuff) - pos ), PSTR("%sP=%.2f,%sL=%d"), systemVars.dChName[1],Aframe.dIn.pulses[1],systemVars.dChName[1],Aframe.dIn.level[1],systemVars.dChName[1]);
+		pos += snprintf_P( &cmd_printfBuff[pos], ( sizeof(cmd_printfBuff) - pos ), PSTR("%sP=%.2f,%sL=%d,"), systemVars.dChName[0],Aframe.dIn.pulses[0],systemVars.dChName[0],Aframe.dIn.level[0]);
+		pos += snprintf_P( &cmd_printfBuff[pos], ( sizeof(cmd_printfBuff) - pos ), PSTR("%sP=%.2f,%sL=%d"), systemVars.dChName[1],Aframe.dIn.pulses[1],systemVars.dChName[1],Aframe.dIn.level[1]);
 		// Bateria
 		pos += snprintf_P( &cmd_printfBuff[pos], ( sizeof(cmd_printfBuff) - pos ), PSTR(",bt=%.2f}\r\n\0"),Aframe.batt );
 		FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );

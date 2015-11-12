@@ -10,16 +10,16 @@
 
 #define CICLOSEN30S	300
 
-char out_printfBuff[CHAR128];
+static char out_printfBuff[CHAR128];
 TimerHandle_t consignaTimer;
 
 static void pv_setConsignaInicial ( void );
 static void pv_checkAndSetConsigna(void);
 void pv_consignaTimerCallback( TimerHandle_t pxTimer );
 
-RtcTimeType_t rtcDateTime;
-u16 now;
-s08 f_consignaCallBack;
+static RtcTimeType_t rtcDateTime;
+static u16 now;
+static s08 f_consignaCallBack;
 
 #define set_f_consignaCallBack() ( f_consignaCallBack = TRUE )
 #define reset_f_consignaCallBack() ( f_consignaCallBack = FALSE )

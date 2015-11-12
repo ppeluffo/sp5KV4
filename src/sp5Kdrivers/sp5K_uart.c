@@ -367,3 +367,11 @@ fifo_handle_s *pxFifo = xFifo;
 	return( pxFifo->length - pxFifo->uxMessageWaiting);
 }
 /*------------------------------------------------------------------------------------*/
+size_t uxFifoMessagesWaiting( fifoHandle_t xFifo )
+{
+
+fifo_handle_s *pxFifo = xFifo;
+
+	return(pxFifo->uxMessageWaiting);
+}
+/*------------------------------------------------------------------------------------*/

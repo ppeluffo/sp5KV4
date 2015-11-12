@@ -9,6 +9,10 @@
 #include <sp5KV3.h>
 #include "FRTOS-IO.h"
 
+void pv_enqueue( UART_device_control_t *pUart, char *pC );
+s08 pv_queueReachHighWaterMark( UART_device_control_t *pUart);
+s08 pv_queueReachLowWaterMark( UART_device_control_t *pUart);
+
 //------------------------------------------------------------------------------------
 // FUNCIONES GENERALES FreeRTOS ( son las que usa la aplicacion )
 //------------------------------------------------------------------------------------
@@ -169,53 +173,98 @@ size_t FreeRTOS_UART_write( Peripheral_Descriptor_t const pxPeripheral, const vo
 
 char cChar;
 char *p;
-int UARTx;
 size_t bytes2tx;
 Peripheral_Control_t * const pxPeripheralControl = ( Peripheral_Control_t * const ) pxPeripheral;
 UART_device_control_t *pUart;
+size_t wBytes = 0;
+s08 stop, start;
 
 	pUart = pxPeripheralControl->phDevice;
 	// Controlo no hacer overflow en la cola de trasmision
 	bytes2tx = xBytes;
-	if ( pUart->txBufferLength < xBytes ) {
-		bytes2tx = pUart->txBufferLength;
-	}
 
 	// Espero el semaforo en forma persistente.
 	while ( xSemaphoreTake(pxPeripheralControl->xBusSemaphore, ( TickType_t ) 10 ) != pdTRUE )
 		taskYIELD();
 
 	// Trasmito.
-	// Espero que halla lugar en la cola de trasmision. ( La uart se va limpiando al trasmitir )
+	// Espero que los buffers esten vacios. ( La uart se va limpiando al trasmitir )
 	if ( pUart->txBufferType == QUEUE ) {
-		while  ( uxQueueSpacesAvailable( pUart->txStruct ) < bytes2tx )
+		while  ( uxQueueMessagesWaiting( pUart->txStruct ) > 0 )
 			taskYIELD();
 	} else {
-		while  ( uxFifoSpacesAvailable( pUart->txStruct ) < bytes2tx )
+		while  ( uxFifoMessagesWaiting( pUart->txStruct ) > 0 )
 			taskYIELD();
 	}
 
 	// Cargo el buffer en la cola de trasmision.
 	p = pvBuffer;
 	while (*p && (bytes2tx-- > 0) ) {
+
+		// Voy cargando la cola de a uno.
 		cChar = *p;
-		if ( pUart->txBufferType == QUEUE ) {
-			xQueueSend( pUart->txStruct, &cChar, ( TickType_t ) 10  );
-		} else {
-			xFifoSend( pUart->txStruct, &cChar, ( TickType_t ) 10  );
-		}
+		pv_enqueue( pUart, &cChar );
 		p++;
+		wBytes++;	// Cuento los bytes que voy trasmitiendo
+
+		// Si la cola esta llena, empiezo a trasmitir y espero que se vacie.
+		if (  pv_queueReachHighWaterMark(pUart) ) {
+			// Habilito a trasmitir para que se vacie
+			vUartInterruptOn(pxPeripheralControl->portId);
+			// Y espero que se haga mas lugar.
+			while ( ! pv_queueReachLowWaterMark(pUart) )
+				taskYIELD();
+		}
 	}
 
 	// Luego inicio la trasmision invocando la interrupcion.
-	UARTx = pxPeripheralControl->portId;
-	vUartInterruptOn(UARTx);
+	vUartInterruptOn(pxPeripheralControl->portId);
 
 	xSemaphoreGive( pxPeripheralControl->xBusSemaphore );
 
-	return xBytes;	// Puse todos los caracteres en la cola.
+	//return xBytes;	// Puse todos los caracteres en la cola.
+	return (wBytes);
 
+}
+//------------------------------------------------------------------------------------
+s08 pv_queueReachLowWaterMark( UART_device_control_t *pUart)
+{
+s08 retS = FALSE;
 
+	if ( pUart->txBufferType == QUEUE ) {
+		if ( uxQueueMessagesWaiting( pUart->txStruct ) < (int)(0.2 * pUart->txBufferLength ))
+			retS = TRUE;
+	} else {
+		if ( uxFifoMessagesWaiting( pUart->txStruct ) < (int)(0.2 * pUart->txBufferLength ))
+			retS = TRUE;
+	}
+	return(retS);
+
+}
+
+//------------------------------------------------------------------------------------
+s08 pv_queueReachHighWaterMark( UART_device_control_t *pUart)
+{
+s08 retS = FALSE;
+
+	if ( pUart->txBufferType == QUEUE ) {
+		if ( uxQueueMessagesWaiting( pUart->txStruct ) > (int)(0.8 * pUart->txBufferLength ))
+			retS = TRUE;
+	} else {
+		if ( uxFifoMessagesWaiting( pUart->txStruct ) > (int)(0.8 * pUart->txBufferLength ))
+			retS = TRUE;
+	}
+	return(retS);
+
+}
+//------------------------------------------------------------------------------------
+void pv_enqueue( UART_device_control_t *pUart, char *pC )
+{
+	if ( pUart->txBufferType == QUEUE ) {
+		xQueueSend( pUart->txStruct, pC, ( TickType_t ) 10  );
+	} else {
+		xFifoSend( pUart->txStruct, pC, ( TickType_t ) 10  );
+	}
 }
 //------------------------------------------------------------------------------------
 size_t FreeRTOS_UART_read( Peripheral_Descriptor_t const pxPeripheral, void * const pvBuffer, const size_t xBytes )

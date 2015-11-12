@@ -24,8 +24,8 @@ static void pv_clearQ(void);
 static void pv_pollQ(void);
 static void pv_pollDcd(void);
 
-char dIn_printfBuff[CHAR64];	// Buffer de impresion
-dinData_t digIn;				// Estructura local donde cuento los pulsos.
+static char dIn_printfBuff[CHAR64];	// Buffer de impresion
+static dinData_t digIn;				// Estructura local donde cuento los pulsos.
 static struct {
 	s08 serviceMode;
 	s08 msgReload;
@@ -119,8 +119,8 @@ u32 tickCount;
 	if ( systemVars.dcd != pin ) {
 		systemVars.dcd = pin;
 		tickCount = xTaskGetTickCount();
-		if ( pin == 1 ) { snprintf_P( dIn_printfBuff,sizeof(dIn_printfBuff),PSTR(".[%06lu] tkDigitalIn: DCD off(1)\r\n\0"), tickCount );	}
-		if ( pin == 0 ) { snprintf_P( dIn_printfBuff,sizeof(dIn_printfBuff),PSTR(".[%06lu] tkDigitalIn: DCD on(0)\r\n\0"), tickCount );	}
+		if ( pin == 1 ) { snprintf_P( dIn_printfBuff,sizeof(dIn_printfBuff),PSTR(".[%06lu] tkDigitalIn: DCD off(%d)\r\n\0"), tickCount,pin );	}
+		if ( pin == 0 ) { snprintf_P( dIn_printfBuff,sizeof(dIn_printfBuff),PSTR(".[%06lu] tkDigitalIn: DCD on(%d)\r\n\0"), tickCount,pin );	}
 
 		if ( (systemVars.debugLevel & D_DIGITAL) != 0) {
 			FreeRTOS_write( &pdUART1, dIn_printfBuff, sizeof(dIn_printfBuff) );

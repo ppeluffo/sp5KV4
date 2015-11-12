@@ -8,7 +8,7 @@
 
 #include <sp5KV3.h>
 
-char aIn_printfBuff[CHAR128];
+static char aIn_printfBuff[CHAR256];
 TimerHandle_t pollingTimer;
 
 // Estados
@@ -43,7 +43,7 @@ static int trD06(void);
 
 static u08 tkAIN_state = tkdST_INIT;	// Estado
 static u32 tickCount;					// para usar en los mensajes del debug.
-double rAIn[NRO_CHANNELS + 1];		// Almaceno los datos de conversor A/D
+static double rAIn[NRO_CHANNELS + 1];	// Almaceno los datos de conversor A/D
 static frameData_t Aframe;
 
 static struct {
@@ -261,7 +261,7 @@ static int trD00(void)
 	MCP_setAnalogPwr( 0 );
 
 	tickCount = xTaskGetTickCount();
-	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD00 pwroff sensors\r\n"), tickCount);
+	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD00 pwroff sensors\r\n\0"), tickCount);
 
 	if ( (systemVars.debugLevel & D_DATA) != 0) {
 		FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
@@ -285,7 +285,7 @@ static int trD01(void)
 	MCP_setSensorPwr( 0 );
 	MCP_setAnalogPwr( 0 );
 	tickCount = xTaskGetTickCount();
-	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD01 pwroff sensors\r\n"), tickCount);
+	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD01 pwroff sensors\r\n\0"), tickCount);
 
 	if ( (systemVars.debugLevel & D_DATA) != 0) {
 		FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
@@ -419,7 +419,7 @@ StatBuffer_t pxFFStatBuffer;
 		MCP_setSensorPwr( 0 );
 		MCP_setAnalogPwr( 0 );
 		tickCount = xTaskGetTickCount();
-		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD06 pwroff sensors\r\n"), tickCount);
+		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD06 pwroff sensors\r\n\0"), tickCount);
 		if ( (systemVars.debugLevel & D_DATA) != 0) {
 			FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
 		}
@@ -429,7 +429,7 @@ StatBuffer_t pxFFStatBuffer;
 	for ( channel = 0; channel < (NRO_CHANNELS + 1); channel++) {
 		rAIn[channel] /= CICLOS_POLEO;
 		tickCount = xTaskGetTickCount();
-		snprintf_P( aIn_printfBuff,CHAR128,PSTR(".[%06lu] tkAnalogIn::trD06 AvgCh[%d]=%.1f\r\n"), tickCount, channel, rAIn[channel]);
+		snprintf_P( aIn_printfBuff,CHAR128,PSTR(".[%06lu] tkAnalogIn::trD06 AvgCh[%d]=%.1f\r\n\0"), tickCount, channel, rAIn[channel]);
 		if ( (systemVars.debugLevel & D_DATA) != 0) {
 			FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
 		}
@@ -520,7 +520,7 @@ static void pv_AINprintExitMsg(u08 code)
 {
 	if ( (systemVars.debugLevel & D_DATA) != 0) {
 		tickCount = xTaskGetTickCount();
-		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::exit TR%02d\r\n"), tickCount,code);
+		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::exit TR%02d\r\n\0"), tickCount,code);
 		FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
 	}
 }

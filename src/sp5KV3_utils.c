@@ -97,11 +97,6 @@ u32 tdial;
 	systemVars.timerDial = tdial;
 	xSemaphoreGive( sem_SYSVars );
 
-	// tk_Gprs:
-	while ( xTaskNotify(xHandle_tkGprs, TKG_PARAM_RELOAD , eSetBits ) != pdPASS ) {
-		vTaskDelay( ( TickType_t)( 100 / portTICK_RATE_MS ) );
-	}
-
 	return(TRUE);
 }
 //----------------------------------------------------------------------------------------
@@ -322,11 +317,6 @@ u16 tpoll;
 	systemVars.timerPoll = tpoll;
 	xSemaphoreGive( sem_SYSVars );
 
-	// tk_aIn: notifico en modo persistente. Si no puedo, me voy a resetear por watchdog. !!!!
-	while ( xTaskNotify(xHandle_tkAIn, TKA_PARAM_RELOAD , eSetBits ) != pdPASS ) {
-		vTaskDelay( ( TickType_t)( 100 / portTICK_RATE_MS ) );
-	}
-
 	return(TRUE);
 }
 u08 pv_paramStore(u08* data, u08* addr, u16 sizebytes)
@@ -374,7 +364,7 @@ u08 channel;
 	strncpy_P(systemVars.dlgId, PSTR("SPY999\0"),DLGID_LENGTH);
 	strncpy_P(systemVars.serverPort, PSTR("80\0"),PORT_LENGTH	);
 	strncpy_P(systemVars.passwd, PSTR("spymovil123\0"),PASSWD_LENGTH);
-	strncpy_P(systemVars.serverScript, PSTR("/cgi-bin/sp5K/sp5K.pl\0"),SCRIPT_LENGTH);
+	strncpy_P(systemVars.serverScript, PSTR("/cgi-bin/sp5K/sp5KV3.pl\0"),SCRIPT_LENGTH);
 
 	systemVars.csq = 0;
 	systemVars.dbm = 0;
@@ -392,7 +382,7 @@ u08 channel;
 
 	strncpy_P(systemVars.serverAddress, PSTR("192.168.0.9\0"),IP_LENGTH);
 	systemVars.timerPoll = 300;			// Poleo c/5 minutos
-	systemVars.timerDial = 10800;		// Transmito c/3 hs.
+	systemVars.timerDial = 1800;		// Transmito c/3 hs.
 
 	systemVars.pwrSave = modoPWRSAVE_ON;
 	systemVars.pwrSaveStartTime =u_convertHHMM2min(2230);	// 22:30 PM
@@ -428,3 +418,50 @@ u08 channel;
 
 }
 //------------------------------------------------------------------------------------
+s08 u_wrRtc(char *s)
+{
+u08 dateTimeStr[11];
+char tmp[3];
+s08 retS;
+RtcTimeType_t rtcDateTime;
+
+
+	/* YYMMDDhhmm */
+	if ( s == NULL )
+		return(FALSE);
+
+	memcpy(dateTimeStr, s, 10);
+	// year
+	tmp[0] = dateTimeStr[0]; tmp[1] = dateTimeStr[1];	tmp[2] = '\0';
+	rtcDateTime.year = atoi(tmp);
+	// month
+	tmp[0] = dateTimeStr[2]; tmp[1] = dateTimeStr[3];	tmp[2] = '\0';
+	rtcDateTime.month = atoi(tmp);
+	// day of month
+	tmp[0] = dateTimeStr[4]; tmp[1] = dateTimeStr[5];	tmp[2] = '\0';
+	rtcDateTime.day = atoi(tmp);
+	// hour
+	tmp[0] = dateTimeStr[6]; tmp[1] = dateTimeStr[7];	tmp[2] = '\0';
+	rtcDateTime.hour = atoi(tmp);
+	// minute
+	tmp[0] = dateTimeStr[8]; tmp[1] = dateTimeStr[9];	tmp[2] = '\0';
+	rtcDateTime.min = atoi(tmp);
+
+	retS = RTC_write(&rtcDateTime);
+	return(retS);
+}
+/*------------------------------------------------------------------------------------*/
+char *u_now(void)
+{
+
+	// Devuelve un puntero a un string con la fecha y hora formateadas para usar en
+	// los mensajes de log.
+
+RtcTimeType_t rtcDateTime;
+
+	RTC_read(&rtcDateTime);
+	rtcDateTime.year -= 2000;
+	snprintf_P( nowStr,sizeof(nowStr), PSTR("%02d/%02d/%02d %02d:%02d\0"),rtcDateTime.day,rtcDateTime.month,rtcDateTime.year,rtcDateTime.hour,rtcDateTime.min,rtcDateTime.sec );
+	return(nowStr);
+}
+
