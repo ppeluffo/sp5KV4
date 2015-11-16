@@ -191,9 +191,9 @@ static void cmdRedialFunction(void)
 {
 	// Envio un mensaje a la tk_Gprs para que recargue la configuracion y disque al server
 	// Notifico en modo persistente. Si no puedo me voy a resetear por watchdog. !!!!
-//	while ( xTaskNotify(xHandle_tkGprs, GPRSMSG_RELOAD , eSetBits ) != pdPASS ) {
+	while ( xTaskNotify(xHandle_tkGprs,TKG_PARAM_RELOAD , eSetBits ) != pdPASS ) {
 		vTaskDelay( ( TickType_t)( 100 / portTICK_RATE_MS ) );
-//	}
+	}
 
 }
 /*------------------------------------------------------------------------------------*/
@@ -321,7 +321,7 @@ StatBuffer_t pxFFStatBuffer;
 
 	/* Memoria */
 	FF_stat(&pxFFStatBuffer);
-	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  memory: wrPtr=%d,rdPtr=%d,delPtr=%d,4wr=%d,4rd=%d,4del=%d \r\n"), pxFFStatBuffer.WRptr,pxFFStatBuffer.RDptr, pxFFStatBuffer.DELptr,pxFFStatBuffer.rcds4wr,pxFFStatBuffer.rcds4rd,pxFFStatBuffer.rcds4del );
+	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  memory: wrPtr=%d,rdPtr=%d,delPtr=%d,Free=%d,4del=%d \r\n"), pxFFStatBuffer.HEAD,pxFFStatBuffer.RD, pxFFStatBuffer.TAIL,pxFFStatBuffer.rcdsFree,pxFFStatBuffer.rcds4del );
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 
 	/* WRK mode (NORMAL / SERVICE) */
@@ -1299,6 +1299,7 @@ frameData_t Aframe;
 size_t bRead;
 u08 pos, channel;
 
+	FF_seek();
 	while(1) {
 		bRead = FF_fread( &Aframe, sizeof(Aframe));
 		if ( bRead != sizeof(Aframe))
@@ -1306,7 +1307,7 @@ u08 pos, channel;
 
 		// imprimo
 		FF_stat(&pxFFStatBuffer);
-		pos = snprintf_P( cmd_printfBuff, sizeof(cmd_printfBuff), PSTR("RD:[%d/%d/%d][%d/%d/%d] "), pxFFStatBuffer.WRptr,pxFFStatBuffer.RDptr, pxFFStatBuffer.DELptr,pxFFStatBuffer.rcds4wr,pxFFStatBuffer.rcds4rd,pxFFStatBuffer.rcds4del);
+		pos = snprintf_P( cmd_printfBuff, sizeof(cmd_printfBuff), PSTR("RD:[%d/%d/%d][%d/%d] "), pxFFStatBuffer.HEAD,pxFFStatBuffer.RD, pxFFStatBuffer.TAIL,pxFFStatBuffer.rcdsFree,pxFFStatBuffer.rcds4del);
 		pos += snprintf_P( &cmd_printfBuff[pos], ( sizeof(cmd_printfBuff) - pos ), PSTR("frame::{" ));
 		pos += snprintf_P( &cmd_printfBuff[pos], ( sizeof(cmd_printfBuff) - pos ),PSTR( "%04d%02d%02d,"),Aframe.rtc.year,Aframe.rtc.month,Aframe.rtc.day );
 		pos += snprintf_P( &cmd_printfBuff[pos], ( sizeof(cmd_printfBuff) - pos ), PSTR("%02d%02d%02d,"),Aframe.rtc.hour,Aframe.rtc.min, Aframe.rtc.sec );

@@ -257,7 +257,7 @@ int i;
 	systemVars.dcd = 0;
 	systemVars.ri = 0;
 	systemVars.termsw = 0;
-	systemVars.debugLevel = D_BASIC;
+	systemVars.debugLevel = D_BASIC + D_GPRS;
 	systemVars.wrkMode = WK_NORMAL;
 
 	// Cuando arranca si la EE no esta inicializada puede dar cualquier cosa.
@@ -378,7 +378,7 @@ u08 channel;
 	strncpy_P(systemVars.apn, PSTR("SPYMOVIL.VPNANTEL\0"),APN_LENGTH);
 
 	// DEBUG
-	systemVars.debugLevel = D_BASIC;
+	systemVars.debugLevel = D_BASIC + D_GPRS;
 
 	strncpy_P(systemVars.serverAddress, PSTR("192.168.0.9\0"),IP_LENGTH);
 	systemVars.timerPoll = 300;			// Poleo c/5 minutos

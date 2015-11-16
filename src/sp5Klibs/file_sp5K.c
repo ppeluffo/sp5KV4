@@ -28,9 +28,20 @@ size_t FF_fopen(void)
 		Si no hay transicions y todos son blancos, la memoria esta vacia.
 		Si todo anda bien, retorna en ERRNO un NONE.
 		En otro caso retorna el recdNbr del error y setea la variable ERRNO
+
+		// Testing con buffer de 16 posiciones:
+		// Memoria vacia: OK
+		// Memoria llena: OK
+		// Memoria con HEAD(10) > TAIL(4), Free(10) OK
+		// Memoria con HEAD(3) < TAIL(8), Free(5) OK
+		// Condicion de borde 1: HEAD(15), TAIL(0), Free(1) OK
+		// Condicion de borde 2: HEAD(0), TAIL(1), Free(1) OK
+		// Condicion de borde 3: HEAD(0), TAIL(15), Free(15) OK
+		// Condicion de borde 4: HEAD(1), TAIL(0), Free(15) OK
+
 	 */
 
-char mark_Z, mark;
+u08 mark_Z, mark;
 u16 xPos;
 s08 transicion = FALSE;
 u16 val = 0;
@@ -52,7 +63,7 @@ size_t xReturn = 0U;
 	val = FF_ADDR_START +  xPos * FF_RECD_SIZE;
 	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
 	// leo una pagina entera, (recd) 64 bytes.
-	memset( FCB.ff_buffer,'\0', sizeof(FCB.ff_buffer) );
+	memset( FCB.ff_buffer,0, sizeof(FCB.ff_buffer) );
 	xReturn = FreeRTOS_read(&pdI2C, &FCB.ff_buffer, FF_RECD_SIZE);
 
 #ifdef DEBUG_FF
@@ -72,7 +83,7 @@ size_t xReturn = 0U;
 		val = FF_ADDR_START + xPos * FF_RECD_SIZE;
 		FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
 		// leo una pagina entera, (recd) 64 bytes.
-		memset( FCB.ff_buffer,'\0', sizeof(FCB.ff_buffer) );
+		memset( FCB.ff_buffer,0, sizeof(FCB.ff_buffer) );
 		xReturn = FreeRTOS_read(&pdI2C, &FCB.ff_buffer, FF_RECD_SIZE);
 
 #ifdef DEBUG_FF
@@ -87,23 +98,22 @@ size_t xReturn = 0U;
 		mark = FCB.ff_buffer[sizeof(FCB.ff_buffer) - 1];
 
 #ifdef DEBUG_FF
-		if ( mark == 0xC5 ) {
+		if ( mark == FF_WRTAG ) {
 			snprintf_P( debug_printfBuff,sizeof(debug_printfBuff),PSTR("FO: [%d][%d][%d][%d][0X%03x]\r\n\0"),xPos, val,FF_RECD_SIZE, xReturn, mark);
 			FreeRTOS_write( &pdUART1, debug_printfBuff, sizeof(debug_printfBuff) );
 		}
 #endif
 
 		// busco transiciones:
-		if ( ( mark_Z == '\0') && ( mark == 0xC5) ) {
+		if ( ( mark_Z == 0) && ( mark == FF_WRTAG ) ) {
 			// Tengo una transicion VACIO->DATO.
-			FCB.ff_stat.DELptr = xPos;
-			FCB.ff_stat.RDptr = xPos;
+			FCB.ff_stat.TAIL = xPos;
 			transicion = TRUE;
 		}
 
-		if ( ( mark_Z == 0xC5) && ( mark == '\0') ) {
+		if ( ( mark_Z == FF_WRTAG ) && ( mark == 0) ) {
 			// Tengo una transicion DATO->VACIO.
-			FCB.ff_stat.WRptr = xPos;
+			FCB.ff_stat.HEAD = xPos;
 			transicion = TRUE;
 		}
 
@@ -113,33 +123,27 @@ size_t xReturn = 0U;
 	// Recorri toda la memoria. Analizo las transiciones...
 	if ( ! transicion ) {
 		// Si no hubieron transiciones es que la memoria esta llena o vacia.
-		if ( mark == '\0') {
+		if ( mark == 0 ) {
 			// Memoria vacia.
-			FCB.ff_stat.RDptr = 0;
-			FCB.ff_stat.WRptr = 0;
-			FCB.ff_stat.DELptr = 0;
-			FCB.ff_stat.rcds4wr = FF_MAX_RCDS;
-			FCB.ff_stat.rcds4rd = 0;
-			FCB.ff_stat.rcds4del = 0;
+			FCB.ff_stat.HEAD = 0;
+			FCB.ff_stat.TAIL = 0;
+			FCB.ff_stat.RD  = FCB.ff_stat.TAIL;
+			FCB.ff_stat.rcdsFree = FF_MAX_RCDS;
 		} else {
 			// Memoria llena
-			FCB.ff_stat.DELptr = 0;
-			FCB.ff_stat.RDptr = 0;
-			FCB.ff_stat.WRptr = 0;
-			FCB.ff_stat.rcds4wr = 0;
-			FCB.ff_stat.rcds4rd = FF_MAX_RCDS;
-			FCB.ff_stat.rcds4del = FF_MAX_RCDS;
+			FCB.ff_stat.HEAD = 0;
+			FCB.ff_stat.TAIL = 0;
+			FCB.ff_stat.RD  = FCB.ff_stat.TAIL;
+			FCB.ff_stat.rcdsFree = 0;
 		}
 	} else {
 		// Memoria con datos. Calculo los registro ocupados.
-		if ( FCB.ff_stat.WRptr > FCB.ff_stat.DELptr) {
-			FCB.ff_stat.rcds4rd = ( FCB.ff_stat.WRptr - FCB.ff_stat.DELptr);
-			FCB.ff_stat.rcds4del = FCB.ff_stat.rcds4rd;
-			FCB.ff_stat.rcds4wr = FF_MAX_RCDS - FCB.ff_stat.rcds4rd;
+		if ( FCB.ff_stat.HEAD > FCB.ff_stat.TAIL) {
+			FCB.ff_stat.RD  = FCB.ff_stat.TAIL;
+			FCB.ff_stat.rcdsFree = FF_MAX_RCDS - FCB.ff_stat.HEAD + FCB.ff_stat.TAIL;
 		} else {
-			FCB.ff_stat.rcds4rd = FF_MAX_RCDS -FCB.ff_stat.DELptr + FCB.ff_stat.WRptr;
-			FCB.ff_stat.rcds4del = FCB.ff_stat.rcds4rd;
-			FCB.ff_stat.rcds4wr = FF_MAX_RCDS - FCB.ff_stat.rcds4rd;
+			FCB.ff_stat.RD  = FCB.ff_stat.TAIL;
+			FCB.ff_stat.rcdsFree = FCB.ff_stat.TAIL - FCB.ff_stat.HEAD;
 		}
 	}
 
@@ -159,12 +163,20 @@ quit:
 size_t FF_fwrite( const void *pvBuffer, size_t xSize)
 {
 	// El archivo es del tipo circular FirstIN-LastOUT.
-	// Escribe un registro en la posicion apuntada por el WRptr.
+	// Escribe un registro en la posicion apuntada por el HEAD.
 	// El registro que se pasa en pvBuffer es del tipo 'frameData_t' de 38 bytes
 	// pero en la memoria voy a escribir de a paginas de 64 bytes.
 	// Retorna el nro.de bytes escritos y setea la variable 'errno' del FCB
 	// En la posicion 63 grabo un tag con el valor 0xC5 para poder luego
 	// determinar si el registro esta ocupado o vacio.
+
+	// TESTING:
+	// Memoria vacia: OK
+	// Memoria llena: OK
+	// Memoria con HEAD(10) > TAIL(4), Free(10) OK
+	// Memoria con HEAD(3) < TAIL(8), Free(5) OK
+	// Condicion de borde 1: HEAD(15), TAIL(0), Free(1) OK
+	// Condicion de borde 2: HEAD(0), TAIL(1), Free(1) OK
 
 u16 val = 0;
 size_t xReturn = 0U;
@@ -175,21 +187,21 @@ u16 tryes;
 	FCB.ff_stat.errno = pdFF_ERRNO_NONE;
 
 	// Si la memoria esta llena no puedo escribir: salgo
-	if ( FCB.ff_stat.rcds4del == FF_MAX_RCDS ) {
+	if ( FCB.ff_stat.rcdsFree == 0 ) {
 		FCB.ff_stat.errno = pdFF_ERRNO_MEMFULL;
 		goto quit;
 	}
 
 	// inicializo la estructura lineal temporal en el FCB para copiar ahi los datos y
 	// calcular el checksum antes de grabarlo en memoria.
-	memset( FCB.ff_buffer,'\0', sizeof(FCB.ff_buffer) );
+	memset( FCB.ff_buffer,0, sizeof(FCB.ff_buffer) );
 	// copio los datos recibidos del frame al buffer ( 0..(xSize-1))
 	memcpy ( FCB.ff_buffer, pvBuffer, xSize );
 	// Calculo y grabo el checksum a continuacion del frame (en la pos.xSize)
 	// El checksum es solo del dataFrame por eso paso dicho size.
 	FCB.ff_buffer[xSize] = pv_memChecksum(FCB.ff_buffer, xSize );
-	// Grabo el tag para indicar que el registro esta ocupado
-	FCB.ff_buffer[sizeof(FCB.ff_buffer) - 1] = FF_TAG;
+	// Grabo el tag para indicar que el registro esta escrito.
+	FCB.ff_buffer[sizeof(FCB.ff_buffer) - 1] = FF_WRTAG;
 
 	// EE WRITE:
 	// Luego indicamos el periferico i2c en el cual queremos leer
@@ -199,7 +211,7 @@ u16 tryes;
 	val = 2;
 	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESSLENGTH, &val);
 	// y direccion interna en la EE.(comienzo del registro / frontera)
-	val = FF_ADDR_START + FCB.ff_stat.WRptr * FF_RECD_SIZE;
+	val = FF_ADDR_START + FCB.ff_stat.HEAD * FF_RECD_SIZE;
 	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
 
 	// Por ultimo escribo la memoria. Escribo un pagina entera, 64 bytes.
@@ -213,7 +225,7 @@ u16 tryes;
 		if ( memcmp (&FCB.check_buffer, &FCB.ff_buffer, FF_RECD_SIZE) == 0 )
 			break;
 		if  ( tryes == 3 ) {
-			snprintf_P( debug_printfBuff,sizeof(debug_printfBuff),PSTR("FFWR ERR: [%d]\r\n\0"), val);
+			snprintf_P( debug_printfBuff,sizeof(debug_printfBuff),PSTR("FS WR ERR: [%d]\r\n\0"), val);
 			FreeRTOS_write( &pdUART1, debug_printfBuff, sizeof(debug_printfBuff) );
 			FCB.ff_stat.errno = pdFF_ERRNO_MEMWR;
 			xReturn = 0U;
@@ -227,13 +239,10 @@ u16 tryes;
 		xReturn = 0U;
 		goto quit;
 	} else {
-		// OK: Ajusto los punteros
-		FCB.ff_stat.rcds4rd++;
-		FCB.ff_stat.rcds4del++;
-		FCB.ff_stat.rcds4wr--;
 		xReturn = xSize;
 		// Avanzo el puntero de WR en modo circular
-		FCB.ff_stat.WRptr = (++FCB.ff_stat.WRptr == FF_MAX_RCDS) ?  0 : FCB.ff_stat.WRptr;
+		FCB.ff_stat.HEAD = (++FCB.ff_stat.HEAD == FF_MAX_RCDS) ?  0 : FCB.ff_stat.HEAD;
+		FCB.ff_stat.rcdsFree--;
 	}
 
 quit:
@@ -245,8 +254,12 @@ quit:
 //------------------------------------------------------------------------------------
 size_t FF_fread( void *pvBuffer, size_t xSize)
 {
-	// Lee un registro apuntado por RDptr.
-	// Retorna TRUE o FALSE y en este caso setea la variable 'errno' del FCB
+	// Lee un registro apuntado por RD.
+	// Retorna la cantidad de bytes leidos.
+	// Las condiciones de lectura son:
+	// - la memoria debe tener al menos algun dato
+	// - el puntero RD debe apuntar dentro del bloque 'leible'
+	//
 	// Lee un registro ( como string ) y lo copia al espacio de memoria apuntado
 	// *pvBuffer. El puntero es void y entonces debemos pasar el tamaño de la estructura
 	// a la que apunta.
@@ -261,14 +274,26 @@ u08 rdCheckSum;
 	FreeRTOS_ioctl(&pdI2C,ioctlOBTAIN_BUS_SEMPH, NULL);
 	FCB.ff_stat.errno = pdFF_ERRNO_NONE;
 
-	// Si la memoria esta vacia salgo
-	if ( FCB.ff_stat.rcds4rd == 0 ) {
+	// Si la memoria esta vacia salgo ( todos los registros libres )
+	if ( FCB.ff_stat.rcdsFree == FF_MAX_RCDS ) {
 		FCB.ff_stat.errno = pdFF_ERRNO_MEMEMPTY;
 		goto quit;
 	}
 
+	// Si el registro no corresponde al bloque 'leible', salgo
+	if ( ( FCB.ff_stat.HEAD > FCB.ff_stat.TAIL) && ( ( FCB.ff_stat.RD >= FCB.ff_stat.HEAD ) || ( FCB.ff_stat.RD < FCB.ff_stat.TAIL ) ) ) {
+		FCB.ff_stat.errno = pdFF_ERRNO_MEMEMPTY;
+		goto quit;
+	}
+	if ( ( FCB.ff_stat.HEAD < FCB.ff_stat.TAIL) && ( ( FCB.ff_stat.RD >= FCB.ff_stat.HEAD ) && ( FCB.ff_stat.RD < FCB.ff_stat.TAIL ) ) ) {
+		FCB.ff_stat.errno = pdFF_ERRNO_MEMEMPTY;
+		goto quit;
+	}
+
+	// Aqui es que estoy dentro de un bloque 'leible'
+
 	// inicializo la estructura lineal temporal en el FCB.
-	memset( FCB.ff_buffer,'\0', sizeof(FCB.ff_buffer) );
+	memset( FCB.ff_buffer,0, sizeof(FCB.ff_buffer) );
 	// EE READ:
 	// Indicamos el periferico i2c al cual quiero acceder
 	val = EE_ADDR;
@@ -277,14 +302,12 @@ u08 rdCheckSum;
 	val = 2;
 	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESSLENGTH, &val);
 	// y direccion interna en la EE.(comienzo del registro / frontera)
-	val = FF_ADDR_START + FCB.ff_stat.RDptr * FF_RECD_SIZE;
+	val = FF_ADDR_START + FCB.ff_stat.RD * FF_RECD_SIZE;
 	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
 	// Por ultimo leo la memoria: un pagina entera, (recd) 64 bytes.
 	xReturn = FreeRTOS_read(&pdI2C, &FCB.ff_buffer, FF_RECD_SIZE);
-
 	// Avanzo el puntero de RD en modo circular siempre !!
-	FCB.ff_stat.RDptr = (++FCB.ff_stat.RDptr == FF_MAX_RCDS) ?  0 : FCB.ff_stat.RDptr;
-	FCB.ff_stat.rcds4rd--;
+	FCB.ff_stat.RD = (++FCB.ff_stat.RD == FF_MAX_RCDS) ?  0 : FCB.ff_stat.RD;
 
 	// Copio los datos a la estructura de salida.: aun no se si estan correctos
 	memcpy( pvBuffer, &FCB.ff_buffer, xSize );
@@ -307,7 +330,7 @@ u08 rdCheckSum;
 	}
 
 	// Vemos si la ultima posicion tiene el tag de ocupado.
-	if ( FCB.ff_buffer[sizeof(FCB.ff_buffer) - 1] != FF_TAG ) {
+	if ( ( FCB.ff_buffer[sizeof(FCB.ff_buffer) - 1] )  != FF_WRTAG ) {
 		FCB.ff_stat.errno = pdFF_ERRNO_RDNOTAG;
 		xReturn = 0U;
 		goto quit;
@@ -324,9 +347,38 @@ quit:
 //------------------------------------------------------------------------------------
 void FF_stat( StatBuffer_t *pxStatBuffer )
 {
-	// Copia por el puntero *pxStatBuffer pasado, la estructura de control del FCB
-	// En caso de error devuelve FALSE pero no tiene sentido que setee el errno.
+	// Debe calcularse el contador de los registros ocupados que pueden ser borrados.( ya leidos )
 	FreeRTOS_ioctl(&pdI2C,ioctlOBTAIN_BUS_SEMPH, NULL);
+
+	// Caso 1: Memoria vacia:
+	if ( FCB.ff_stat.rcdsFree == FF_MAX_RCDS ) {
+		FCB.ff_stat.rcds4del = 0;
+		goto quit;
+	}
+
+	// Caso 2: Memoria llena:
+	if ( FCB.ff_stat.rcdsFree == 0 ) {
+		FCB.ff_stat.rcds4del = FCB.ff_stat.RD - FCB.ff_stat.TAIL;
+		goto quit;
+	}
+
+	// El puntero RD debe estar en un bloque 'leible'
+	if ( ( FCB.ff_stat.HEAD > FCB.ff_stat.TAIL) && ( FCB.ff_stat.RD >= FCB.ff_stat.TAIL ) && ( FCB.ff_stat.RD <= FCB.ff_stat.HEAD ) ) {
+		FCB.ff_stat.rcds4del = FCB.ff_stat.RD - FCB.ff_stat.TAIL;
+		goto quit;
+	}
+
+	if ( ( FCB.ff_stat.HEAD < FCB.ff_stat.TAIL) && ( FCB.ff_stat.RD >= FCB.ff_stat.TAIL ) ) {
+		FCB.ff_stat.rcds4del = FCB.ff_stat.RD - FCB.ff_stat.TAIL;
+		goto quit;
+	}
+
+	if ( ( FCB.ff_stat.HEAD < FCB.ff_stat.TAIL ) && ( FCB.ff_stat.RD <= FCB.ff_stat.HEAD ) ) {
+		FCB.ff_stat.rcds4del = FF_MAX_RCDS - FCB.ff_stat.TAIL + FCB.ff_stat.RD;
+		goto quit;
+	}
+
+quit:
 	memcpy( pxStatBuffer, &FCB.ff_stat, sizeof(StatBuffer_t));
 	FreeRTOS_ioctl(&pdI2C,ioctlRELEASE_BUS_SEMPH, NULL);
 
@@ -337,58 +389,15 @@ s08 FF_seek(void)
 	// Ajusta la posicion del puntero de lectura al primer registro a leer, es decir
 	// al DELptr.
 	FreeRTOS_ioctl(&pdI2C,ioctlOBTAIN_BUS_SEMPH, NULL);
-	FCB.ff_stat.RDptr = FCB.ff_stat.DELptr;
+	FCB.ff_stat.RD = FCB.ff_stat.TAIL;
 	FreeRTOS_ioctl(&pdI2C,ioctlRELEASE_BUS_SEMPH, NULL);
 	return(TRUE);
 
 }
 //------------------------------------------------------------------------------------
-s08 FF_truncate(void)
-{
-	// Borra todos los registros que ya fueron leidos ( descarta )
-
-u16 val = 0;
-size_t xReturn = 0U;
-
-	// Lo primero es obtener el semaforo del I2C
-	FreeRTOS_ioctl(&pdI2C,ioctlOBTAIN_BUS_SEMPH, NULL);
-	FCB.ff_stat.errno = pdFF_ERRNO_NONE;
-
-	// Voy a escribir en c/registro un registro en blanco
-	memset( FCB.ff_buffer,'\0', sizeof(FCB.ff_buffer) );
-	// Luego indicamos el periferico i2c en el cual queremos leer
-	val = EE_ADDR;
-	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_DEVADDRESS, &val);
-	// Luego indicamos la direccion a escribir del dispositivo: largo ( en la ee son 2 bytes )
-	val = 2;
-	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESSLENGTH, &val);
-
-	// Mientras hallan registros ya leidos y no borrados, los borro.
-	while ( FCB.ff_stat.rcds4del > 0 ) {
-
-		// y direccion interna en la EE.(comienzo del registro / frontera)
-		val = FF_ADDR_START + FCB.ff_stat.DELptr * FF_RECD_SIZE;
-		FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
-		// Por ultimo escribo la memoria. Escribo un pagina entera, 64 bytes.
-		xReturn = FreeRTOS_write(&pdI2C, &FCB.ff_buffer, FF_RECD_SIZE);
-
-		// Por ahora no controlo los errores de borrado
-		// OK: Ajusto los punteros
-		FCB.ff_stat.rcds4wr++;
-		FCB.ff_stat.rcds4del--;
-		FCB.ff_stat.DELptr = (++FCB.ff_stat.DELptr == FF_MAX_RCDS) ?  0 : FCB.ff_stat.DELptr;
-	}
-
-	// libero los semaforos
-	FreeRTOS_ioctl(&pdI2C,ioctlRELEASE_BUS_SEMPH, NULL);
-	return(xReturn);
-}
-//------------------------------------------------------------------------------------
 s08 FF_del(void)
 {
-	// Borra un registro.
-	// Retorna TRUE si la memoria esta vacia ya que con esta funcion
-	// seteo la flag mem_empty4del.
+	// Borra un registro apuntado por TAIL.
 
 u16 val = 0;
 size_t xReturn = 0U;
@@ -398,31 +407,31 @@ s08 retS = FALSE;
 	FreeRTOS_ioctl(&pdI2C,ioctlOBTAIN_BUS_SEMPH, NULL);
 	FCB.ff_stat.errno = pdFF_ERRNO_NONE;
 
+	// Si la memoria esta vacia salgo
+	if ( FCB.ff_stat.rcdsFree == FF_MAX_RCDS ) {
+		goto quit;
+	}
+
 	// Voy a escribir en c/registro un registro en blanco
-	memset( FCB.ff_buffer,'\0', sizeof(FCB.ff_buffer) );
-	// Luego indicamos el periferico i2c en el cual queremos leer
+	memset( FCB.ff_buffer,0, sizeof(FCB.ff_buffer) );
+	// Indicamos el periferico i2c en el cual queremos leer
 	val = EE_ADDR;
 	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_DEVADDRESS, &val);
 	// Luego indicamos la direccion a escribir del dispositivo: largo ( en la ee son 2 bytes )
 	val = 2;
 	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESSLENGTH, &val);
+	// y la direccion interna en la EE.(comienzo del registro / frontera)
+	val = FF_ADDR_START + FCB.ff_stat.TAIL * FF_RECD_SIZE;
+	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
+	// Por ultimo escribo la memoria. Escribo un pagina entera, 64 bytes.
+	xReturn = FreeRTOS_write(&pdI2C, &FCB.ff_buffer, FF_RECD_SIZE);
 
-	// SI hay algun registro ya leido y no borrado, los borro.
-	if( FCB.ff_stat.rcds4del !=  FCB.ff_stat.rcds4rd  ) {
+	// Por ahora no controlo los errores de borrado
+	FCB.ff_stat.rcdsFree++;
+	FCB.ff_stat.TAIL = (++FCB.ff_stat.TAIL == FF_MAX_RCDS) ?  0 : FCB.ff_stat.TAIL;
+	retS = TRUE;
 
-		// y direccion interna en la EE.(comienzo del registro / frontera)
-		val = FF_ADDR_START + FCB.ff_stat.DELptr * FF_RECD_SIZE;
-		FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
-		// Por ultimo escribo la memoria. Escribo un pagina entera, 64 bytes.
-		xReturn = FreeRTOS_write(&pdI2C, &FCB.ff_buffer, FF_RECD_SIZE);
-
-		// Por ahora no controlo los errores de borrado
-		// OK: Ajusto los punteros
-		FCB.ff_stat.rcds4wr++;
-		FCB.ff_stat.rcds4del--;
-		FCB.ff_stat.DELptr = (++FCB.ff_stat.DELptr == FF_MAX_RCDS) ?  0 : FCB.ff_stat.DELptr;
-		retS = TRUE;
-	}
+quit:
 
 	// libero los semaforos
 	FreeRTOS_ioctl(&pdI2C,ioctlRELEASE_BUS_SEMPH, NULL);
@@ -447,7 +456,7 @@ u16 xPos;
 	FreeRTOS_ioctl(&pdI2C,ioctlOBTAIN_BUS_SEMPH, NULL);
 
 	// inicializo la estructura lineal temporal del FCB.
-	memset( FCB.ff_buffer,'\0', sizeof(FCB.ff_buffer) );
+	memset( FCB.ff_buffer,0, sizeof(FCB.ff_buffer) );
 
 	// EE WRITE:
 	// Luego indicamos el periferico i2c en el cual queremos leer

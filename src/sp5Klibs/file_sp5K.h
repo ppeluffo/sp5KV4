@@ -24,24 +24,24 @@
 #define FF_SIZE_IN_KB	32	// Tamanio en KB de la eeprom externa.
 #define FF_RECD_SIZE	64	// Tamanio del registro
 #define FF_ADDR_START	0	// Posicion inicial
-#define FF_MAX_RCDS		512	// Cantidad de registros
+//#define FF_MAX_RCDS		512	// Cantidad de registros
+#define FF_MAX_RCDS		128
 
-#define FF_TAG	0xC5
+#define FF_WRTAG	0xC5	// 1100 0101
 
-typedef struct {
-	u16 WRptr;		// Estructura de control de archivo
-	u16 RDptr;
-	u16 DELptr;
-	u16 rcds4wr;
-	u16 rcds4rd;
-	u16 rcds4del;
+typedef struct {	// Estructura de control de archivo
+	u16 HEAD;		// Puntero a la primera posicion libre.
+	u16 TAIL;		// Puntero a la primera posicion ocupada
+	u16 RD;			// Puntero de lectura. Se mueve entre la posicion ocupada y la libre
+	u16 rcdsFree;	// Registros libres para escribir.
+	u16 rcds4del;	// rcds. para borrar ( espacio ocupado y leido )
 	u08 errno;
 } StatBuffer_t;
 
 typedef struct {					// File Control Block
 	StatBuffer_t ff_stat;			// Estructura de control de archivo
-	char ff_buffer[FF_RECD_SIZE];	//
-	char check_buffer[FF_RECD_SIZE];
+	u08 ff_buffer[FF_RECD_SIZE];	//
+	u08 check_buffer[FF_RECD_SIZE];
 } FCB_t;
 
 FCB_t FCB;
@@ -63,7 +63,6 @@ size_t FF_fopen(void);
 size_t FF_fwrite( const void *pvBuffer, size_t xSize);
 size_t FF_fread( void *pvBuffer, size_t xSize);
 void FF_stat( StatBuffer_t *pxStatBuffer );
-s08 FF_truncate(void);
 s08 FF_rewind(void);
 s08 FF_seek(void);
 int FF_errno( void );

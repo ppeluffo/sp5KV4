@@ -281,6 +281,9 @@ static int trD01(void)
 	// Init (load parameters) & start pollTimer
 	pv_AinLoadParameters();
 
+	// En 15s hago un poleo.
+	AN_counters.secs2poll = 15;
+
 	// Apagar los sensores.
 	MCP_setSensorPwr( 0 );
 	MCP_setAnalogPwr( 0 );
@@ -458,9 +461,7 @@ StatBuffer_t pxFFStatBuffer;
 	while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 10 ) != pdTRUE )
 		taskYIELD();
 
-	FF_stat(&pxFFStatBuffer);
-	pos = snprintf_P( aIn_printfBuff, sizeof(aIn_printfBuff), PSTR("WR:[%d/%d/%d][%d/%d/%d] "), pxFFStatBuffer.WRptr,pxFFStatBuffer.RDptr, pxFFStatBuffer.DELptr,pxFFStatBuffer.rcds4wr,pxFFStatBuffer.rcds4rd,pxFFStatBuffer.rcds4del);
-	pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR("frame::{" ));
+	pos = snprintf_P( aIn_printfBuff, sizeof(aIn_printfBuff), PSTR("POLL-> frame::{" ));
 
 	// Inserto el timeStamp.
 	RTC_read(&Aframe.rtc);
@@ -483,18 +484,15 @@ StatBuffer_t pxFFStatBuffer;
 
 	// Bateria
 	Aframe.batt = rAIn[3];
-	pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR(",bt=%.2f}\r\n\0"),Aframe.batt );
+	pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR(",bt=%.2f}\0"),Aframe.batt );
 
 	xSemaphoreGive( sem_SYSVars );
-
-	// Print
-	if ( (systemVars.debugLevel & D_BASIC) != 0) {
-		FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
-	}
 
 	// EL primer poleo puede tener datos erroneos por lo que lo descarto.
 	if ( AN_flags.firstPoll == TRUE ) {
 		AN_flags.firstPoll = FALSE;
+		FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
+		FreeRTOS_write( &pdUART1, "\r\n\0", sizeof("\r\n\0") );
 		goto quit;
 	}
 
@@ -506,9 +504,12 @@ StatBuffer_t pxFFStatBuffer;
 		if ( bWrite != sizeof(Aframe) ) {
 			snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("WR ERROR: (%d)\r\n\0"),pxFFStatBuffer.errno);
 			FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
+		} else {
+			// Mem.stats
+			pos = snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR(" MEM [%d/%d/%d][%d/%d]\r\n\0"), pxFFStatBuffer.HEAD,pxFFStatBuffer.RD, pxFFStatBuffer.TAIL,pxFFStatBuffer.rcdsFree,pxFFStatBuffer.rcds4del);
+			FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
 		}
 	}
-
 
 quit:
 	pv_AINprintExitMsg(6);

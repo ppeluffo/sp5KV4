@@ -140,7 +140,7 @@ fifo_handle_s *pxFifo;
 	pxFifo->head = 0;
 	pxFifo->tail = 0;
 	pxFifo->uxMessageWaiting = 0;
-	memset(pxFifo->buff,'\0', pxFifo->length );	// REVISAR
+	memset(pxFifo->buff,0, pxFifo->length );	// REVISAR
 	taskEXIT_CRITICAL();
 }
 /*------------------------------------------------------------------------------------*/

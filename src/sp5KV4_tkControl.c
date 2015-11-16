@@ -39,7 +39,7 @@ StatBuffer_t pxFFStatBuffer;
 	if ( pxFFStatBuffer.errno != pdFF_ERRNO_NONE ) {
 		snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("FSInit ERROR (%d)[%d]\r\n\0"),ffRcd, pxFFStatBuffer.errno);
 	} else {
-		snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("FSInit OK\r\nwrPtr=%d,rdPtr=%d,delPtr=%d,4wr=%d,4rd=%d,4del=%d\r\n\0"),pxFFStatBuffer.WRptr,pxFFStatBuffer.RDptr, pxFFStatBuffer.DELptr,pxFFStatBuffer.rcds4wr,pxFFStatBuffer.rcds4rd,pxFFStatBuffer.rcds4del);
+		snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("FSInit OK\r\nMEMsize=%d, wrPtr=%d,rdPtr=%d,delPtr=%d,Free=%d,4del=%d\r\n\0"),FF_MAX_RCDS, pxFFStatBuffer.HEAD,pxFFStatBuffer.RD, pxFFStatBuffer.TAIL,pxFFStatBuffer.rcdsFree,pxFFStatBuffer.rcds4del);
 	}
 	FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
 
@@ -60,8 +60,8 @@ StatBuffer_t pxFFStatBuffer;
 	startTask = TRUE;
 
 	// Inicializo el watchdog del micro.
-//	wdt_enable(WDTO_8S);
-//	wdt_reset();
+	wdt_enable(WDTO_8S);
+	wdt_reset();
 
 	 // Initialise the xLastWakeTime variable with the current time.
 	 xLastWakeTime = xTaskGetTickCount();
