@@ -17,8 +17,6 @@ static void pv_setConsignaInicial ( void );
 static void pv_checkAndSetConsigna(void);
 void pv_consignaTimerCallback( TimerHandle_t pxTimer );
 
-static RtcTimeType_t rtcDateTime;
-static u16 now;
 static s08 f_consignaCallBack;
 
 #define set_f_consignaCallBack() ( f_consignaCallBack = TRUE )

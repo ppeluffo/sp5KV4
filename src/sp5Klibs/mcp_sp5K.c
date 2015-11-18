@@ -378,10 +378,10 @@ u08 xBytes = 0;
 	// MCP0_GPPU: pull-ups
 	// Habilito los pull-ups en DCD
 	val = MCP0_GPPU;
-	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
+//	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
 	data = 0;
 	xBytes = sizeof(data);
-	xReturn = FreeRTOS_write(&pdI2C, &data, xBytes);
+//	xReturn = FreeRTOS_write(&pdI2C, &data, xBytes);
 
 	// TERMPWR ON
 	// Al arrancar prendo la terminal para los logs iniciales.

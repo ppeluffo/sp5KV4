@@ -60,7 +60,7 @@ StatBuffer_t pxFFStatBuffer;
 	startTask = TRUE;
 
 	// Inicializo el watchdog del micro.
-	wdt_enable(WDTO_8S);
+//	wdt_enable(WDTO_8S);
 	wdt_reset();
 
 	 // Initialise the xLastWakeTime variable with the current time.

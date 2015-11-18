@@ -3,8 +3,14 @@
  * Como afecta esto a la busqueda.
  *
  * git commit -a -m "beta 20151107 001"
- * git remote add REM_sp5KV3-PREV https://github.com/ppeluffo/sp5K-PREV.git
- * git push -u REM_sp5KV3-PREV master
+ * git remote add REM_SP5KV4 https://github.com/ppeluffo/sp5KV4.git
+ * git push -u REM_SP5KV4 master
+ *
+ * A RESOLVER:
+ * 1- La primera vez que se conecta, el router indica 'destination unreachable'.
+ * Para acortar los tiempos, tal vez el modem debiera en vez de espera, reintentar el comando.
+ *
+ * 2- Watchgog.
  *
  * ----------------------------------------------------------------------------------------------------------------
  */

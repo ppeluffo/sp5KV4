@@ -153,6 +153,8 @@ static void cmdHelpFunction(void)
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("              consigna{diurna|nocturna} ms\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
+	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  (SM) atcmd {cmd}\r\n\0"));
+	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("-read\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  mcp {0|1} regAddr\r\n\0"));
@@ -163,7 +165,7 @@ static void cmdHelpFunction(void)
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  ee addr lenght\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
-	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  (SM) frame,memory \r\n\0"));
+	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  (SM) frame,memory,gprs\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  defaults \r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
@@ -374,7 +376,7 @@ StatBuffer_t pxFFStatBuffer;
 	/* Timers */
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  timerPoll [%ds]: %d\r\n\0"),systemVars.timerPoll, u_readTimeToNextPoll() );
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
-	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  timerDial: [%lu]: %lu\r\n\0"), systemVars.timerDial, u_readTimeToNextDial() );
+	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  timerDial: [%lus]: %li\r\n\0"), systemVars.timerDial, u_readTimeToNextDial() );
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 
 	/* DebugLevel */
@@ -446,6 +448,7 @@ StatBuffer_t pxFFStatBuffer;
 static void cmdReadFunction(void)
 {
 u08 argc;
+char *p;
 
 	argc = pv_makeArgv();
 
@@ -512,6 +515,15 @@ u08 argc;
 	// MEMORY
 	if (!strcmp_P( strupr(argv[1]), PSTR("MEMORY\0")) && ( systemVars.wrkMode == WK_SERVICE) ) {
 		pv_readMemory();
+		return;
+	}
+
+	// GPRS RSP.
+	if (!strcmp_P( strupr(argv[1]), PSTR("GPRS\0"))) {
+		p = FreeRTOS_UART_getFifoPtr(&pdUART0);
+		FreeRTOS_write( &pdUART1, "rx->", sizeof("rx->")  );
+		FreeRTOS_write( &pdUART1, p, UART0_RXBUFFER_LEN );
+		FreeRTOS_write( &pdUART1, "\r\n\0", sizeof("\r\n\0")  );
 		return;
 	}
 
@@ -700,6 +712,12 @@ u08 argc;
 		if ((!strcmp_P(strupr(argv[2]), PSTR("DISCRETO")))) {
 			retS = u_configPwrMode(PWR_DISCRETO);
 		}
+
+		// tk_Gprs:
+		while ( xTaskNotify(xHandle_tkGprs, TKG_PARAM_RELOAD , eSetBits ) != pdPASS ) {
+			vTaskDelay( ( TickType_t)( 100 / portTICK_RATE_MS ) );
+		}
+
 		retS ? pv_snprintfP_OK() : 	pv_snprintfP_ERR();
 		return;
 	}
@@ -959,6 +977,19 @@ u08 argc;
 			return;
 		}
 
+	}
+
+	// ATCMD
+	// Envia un comando al modem.
+	if (!strcmp_P( strupr(argv[1]), PSTR("ATCMD\0")) && ( systemVars.wrkMode == WK_SERVICE) ) {
+		snprintf( cmd_printfBuff,sizeof(cmd_printfBuff),"%s\r\0",argv[2] );
+		FreeRTOS_ioctl( &pdUART0,ioctl_UART_CLEAR_RX_BUFFER, NULL);
+		FreeRTOS_ioctl( &pdUART0,ioctl_UART_CLEAR_TX_BUFFER, NULL);
+		FreeRTOS_write( &pdUART0, cmd_printfBuff, sizeof(cmd_printfBuff) );
+
+		snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("sent->%s\r\n\0"),argv[2] );
+		FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
+		return;
 	}
 
 	// CMD NOT FOUND
