@@ -114,6 +114,8 @@ s08 retS = FALSE;
 u08 pin;
 u32 tickCount;
 
+	wdgStatus.digitalTR = 0;
+
 	retS = MCP_queryDcd(&pin);
 	// Solo indico los cambios.
 	if ( systemVars.dcd != pin ) {
@@ -136,6 +138,8 @@ u08 din0 = 0;
 u08 din1 = 0;
 s08 debugQ = FALSE;
 u32 tickCount;
+
+	wdgStatus.digitalTR = 1;
 
 	// Leo el GPIO.
 	retS = MCP_query2Din( &din0, &din1 );

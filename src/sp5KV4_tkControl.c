@@ -60,7 +60,7 @@ StatBuffer_t pxFFStatBuffer;
 	startTask = TRUE;
 
 	// Inicializo el watchdog del micro.
-//	wdt_enable(WDTO_8S);
+	wdt_enable(WDTO_8S);
 	wdt_reset();
 
 	 // Initialise the xLastWakeTime variable with the current time.
@@ -102,6 +102,8 @@ void pv_flashLeds(void)
 
 static u08 l_timer = 1;
 
+	wdgStatus.controlTR = 0;
+
 	if (l_timer-- > 0 )
 		return;
 
@@ -125,8 +127,26 @@ static u08 l_timer = 1;
 //------------------------------------------------------------------------------------
 void pv_wdgInit(void)
 {
+u08 pos;
+
 	systemWdg = WDG_CTL + WDG_CMD + WDG_DIN + WDG_OUT + WDG_AIN + WDG_GPRS;
-	snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("Watchdog init..\r\n\0"));
+	pos = snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("Watchdog init (0x%X"),wdgStatus.resetCause);
+	if (wdgStatus.resetCause & 0x01 ) {
+		pos += snprintf_P( &ctl_printfBuff[pos],sizeof(ctl_printfBuff),PSTR(" PORF"));
+	}
+	if (wdgStatus.resetCause & 0x02 ) {
+		pos += snprintf_P( &ctl_printfBuff[pos],sizeof(ctl_printfBuff),PSTR(" EXTRF"));
+	}
+	if (wdgStatus.resetCause & 0x04 ) {
+		pos += snprintf_P( &ctl_printfBuff[pos],sizeof(ctl_printfBuff),PSTR(" BORF"));
+	}
+	if (wdgStatus.resetCause & 0x08 ) {
+		pos += snprintf_P( &ctl_printfBuff[pos],sizeof(ctl_printfBuff),PSTR(" WDRF"));
+	}
+	if (wdgStatus.resetCause & 0x10 ) {
+		pos += snprintf_P( &ctl_printfBuff[pos],sizeof(ctl_printfBuff),PSTR(" JTRF"));
+	}
+	pos += snprintf_P( &ctl_printfBuff[pos],sizeof(ctl_printfBuff),PSTR(" )\r\n\0"));
 	FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
 }
 //------------------------------------------------------------------------------------
@@ -136,6 +156,8 @@ void pv_checkWdg(void )
 	// deban estar todas en 0 para asi resetear el wdg del micro.
 
 static u08 l_timer = 1;
+
+	wdgStatus.controlTR = 1;
 
 	if (l_timer-- > 0 )
 		return;
@@ -154,6 +176,8 @@ void pv_dailyReset(void)
 
 const u32 RESET_SECS = 86400;	// 24hs*60m*60s Segundos en 24hs.
 static u32 resetCounter = 0;
+
+	wdgStatus.controlTR = 2;
 
 	resetCounter += 1;
 	if ( resetCounter > RESET_SECS ) {

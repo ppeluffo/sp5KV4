@@ -28,9 +28,16 @@ unsigned int i,j;
 	//----------------------------------------------------------------------------------------
 	// Rutina NECESARIA para que al retornar de un reset por WDG no quede en infinitos resets.
 	// Copiado de la hoja de datos.
+
+	// Lo primero que hago es leer la causa del reset.
+
+	wdgStatus.resetCause = MCUSR;
+
 	cli();
 	wdt_reset();
-	MCUSR &= ~(1<<WDRF);
+
+	//MCUSR &= ~(1<<WDRF);
+	MCUSR = 0x00;
 	/* Write logical one to WDCE and WDE */
 	/* Keep old prescaler setting to prevent unintentional time-out */
 	WDTCSR |= (1<<WDCE) | (1<<WDE);

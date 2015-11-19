@@ -55,7 +55,7 @@
 // DEFINICION DEL TIPO DE SISTEMA
 //----------------------------------------------------------------------------
 #define SP5K_REV "4.0.0"
-#define SP5K_DATE "@ 20151118"
+#define SP5K_DATE "@ 20151119"
 
 #define SP5K_MODELO "sp5KV3 HW:avr1284P R5.0"
 #define SP5K_VERSION "FW:FRTOS8"
@@ -97,6 +97,15 @@ void tkGprsInit(void);
 TaskHandle_t xHandle_tkCmd, xHandle_tkControl, xHandle_tkDigitalIn, xHandle_tkAIn, xHandle_tkGprs,xHandle_tkOutput;
 
 s08 startTask;
+struct {
+	u08 resetCause;
+	u08 analogTR;
+	u08 controlTR;
+	u08 digitalTR;
+	u08 gprsTR;
+	u08 securityFlag;
+} wdgStatus;
+
 
 // Mensajes entre tareas
 #define TKA_PARAM_RELOAD		0x01	// to tkAnalogIN: reload

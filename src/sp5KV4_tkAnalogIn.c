@@ -252,6 +252,8 @@ static int trD00(void)
 
 
 	// Init (load parameters) & start pollTimer
+	wdgStatus.analogTR = 0;
+
 	AN_flags.starting = FALSE;
 
 	pv_AinLoadParameters();
@@ -276,6 +278,7 @@ static int trD01(void)
 	// MSG de autoreload
 	// tkdST_STANDBY->tkdST_STANDBY
 
+	wdgStatus.analogTR = 1;
 	AN_flags.msgReload = FALSE;
 
 	// Init (load parameters) & start pollTimer
@@ -302,6 +305,8 @@ static int trD02(void)
 {
 	// tkdST_STANDBY->tkdST_PWRSETTLE
 
+	wdgStatus.analogTR = 2;
+
 	AN_flags.start2poll = FALSE;
 	// Inicio el contador de segundos para que se estabilizen las fuentes.
 	AN_counters.secs2pwrSettle = SECS2PWRSETTLE;
@@ -320,6 +325,8 @@ static int trD03(void)
 	// tkdST_PWRSETTLE->tkdST_PWRSETTLE
 	// Espero 5s. que se estabilizen las fuentes.
 
+	wdgStatus.analogTR = 3;
+
 	if ( AN_counters.secs2pwrSettle > 0 ) {
 		vTaskDelay( ( TickType_t)( 1000 / portTICK_RATE_MS ) );
 		AN_counters.secs2pwrSettle--;
@@ -334,6 +341,8 @@ static int trD04(void)
 	// tkdST_PWRSETTLE->tkdST_POLLING
 
 u16 adcRetValue;
+
+	wdgStatus.analogTR = 4;
 
 	AN_counters.nroPoleos = CICLOS_POLEO;
 
@@ -356,6 +365,8 @@ static int trD05(void)
 	// Poleo
 
 u16 adcRetValue;
+
+	wdgStatus.analogTR = 5;
 
 	// Dummy convert para prender el ADC ( estabiliza la medida).
 	ADS7827_readCh0( &adcRetValue);
@@ -416,6 +427,8 @@ u08 channel;
 u16 pos = 0;
 size_t bWrite;
 StatBuffer_t pxFFStatBuffer;
+
+	wdgStatus.analogTR = 6;
 
 	//  En modo discreto debo apagar sensores
 	if ( (systemVars.pwrMode == PWR_DISCRETO ) && ( systemVars.wrkMode == WK_NORMAL )) {
