@@ -471,7 +471,7 @@ StatBuffer_t pxFFStatBuffer;
 	rAIn[NRO_CHANNELS] = (15 * rAIn[NRO_CHANNELS]) / 4096;	// Bateria
 
 	// Paso al systemVars.
-	while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 10 ) != pdTRUE )
+	while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 1 ) != pdTRUE )
 		taskYIELD();
 
 	pos = snprintf_P( aIn_printfBuff, sizeof(aIn_printfBuff), PSTR("POLL-> frame::{" ));

@@ -28,7 +28,7 @@ s08 u_configAnalogCh( u08 channel, char *chName, char *s_iMin, char *s_iMax, cha
 {
 	// p1 = name, p2 = iMin, p3 = iMax, p4 = mMin, p5 = mMax
 
-	while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 10 ) != pdTRUE )
+	while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 1 ) != pdTRUE )
 		taskYIELD();
 
 	if ( chName != NULL ) {
@@ -49,7 +49,7 @@ s08 u_configAnalogCh( u08 channel, char *chName, char *s_iMin, char *s_iMax, cha
 //----------------------------------------------------------------------------------------
 s08 u_configDigitalCh( u08 channel, char *chName, char *s_magPP )
 {
-	while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 10 ) != pdTRUE )
+	while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 1 ) != pdTRUE )
 		taskYIELD();
 
 	if ( chName != NULL ) {
@@ -67,7 +67,7 @@ s08 u_configDigitalCh( u08 channel, char *chName, char *s_magPP )
 s08 u_configPwrMode(u08 pwrMode)
 {
 
-	while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 10 ) != pdTRUE )
+	while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 1 ) != pdTRUE )
 		taskYIELD();
 
 	systemVars.pwrMode =  pwrMode;
@@ -92,7 +92,7 @@ u32 tdial;
 	tdial = abs( (u32) ( atol(s_tDial) ));
 	if ( tdial < 120 ) { tdial = 120; }
 
-	while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 10 ) != pdTRUE )
+	while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 1 ) != pdTRUE )
 		taskYIELD();
 	systemVars.timerDial = tdial;
 	xSemaphoreGive( sem_SYSVars );
@@ -105,7 +105,7 @@ void u_configPwrSave(u08 modoPwrSave, char *s_startTime, char *s_endTime)
 // Recibe como parametros el modo ( 0,1) y punteros a string con las horas de inicio y fin del pwrsave
 // expresadas en minutos.
 
-	while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 10 ) != pdTRUE )
+	while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 1 ) != pdTRUE )
 		taskYIELD();
 
 	systemVars.pwrSave = modoPwrSave;
@@ -118,7 +118,7 @@ void u_configPwrSave(u08 modoPwrSave, char *s_startTime, char *s_endTime)
 //----------------------------------------------------------------------------------------
 void u_configConsignas( u08 modo, char *s_horaConsDia,char *s_horaConsNoc,u08 chVA, u08 chVB )
 {
-	while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 10 ) != pdTRUE )
+	while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 1 ) != pdTRUE )
 		taskYIELD();
 
 	switch(modo) {
@@ -217,7 +217,7 @@ u08 storeChecksum = 0;
 u08 loadChecksum = 0;
 u08 i;
 
-	while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 10 ) != pdTRUE )
+	while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 1 ) != pdTRUE )
 		taskYIELD();
 
 	for ( i=0; i<3; i++ ) {
@@ -311,7 +311,7 @@ u16 tpoll;
 	tpoll = abs((u16) ( atol(s_tPoll) ));
 	if ( tpoll < 15 ) { tpoll = 15; }
 
-	while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 10 ) != pdTRUE )
+	while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 1 ) != pdTRUE )
 		taskYIELD();
 
 	systemVars.timerPoll = tpoll;
@@ -357,7 +357,7 @@ u08 channel;
 
 // Configura el systemVars con valores por defecto.
 
-	while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 10 ) != pdTRUE )
+	while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 1 ) != pdTRUE )
 		taskYIELD();
 
 	systemVars.initByte = 0x49;

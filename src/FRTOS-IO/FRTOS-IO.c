@@ -184,7 +184,7 @@ s08 stop, start;
 	bytes2tx = xBytes;
 
 	// Espero el semaforo en forma persistente.
-	while ( xSemaphoreTake(pxPeripheralControl->xBusSemaphore, ( TickType_t ) 10 ) != pdTRUE )
+	while ( xSemaphoreTake(pxPeripheralControl->xBusSemaphore, ( TickType_t ) 1 ) != pdTRUE )
 		taskYIELD();
 
 	// Trasmito.
@@ -327,7 +327,7 @@ UART_device_control_t *pUart;
 			break;
 		case ioctlOBTAIN_BUS_SEMPH:
 			// Espero el semaforo en forma persistente.
-			while ( xSemaphoreTake(pxPeripheralControl->xBusSemaphore, ( TickType_t ) 10 ) != pdTRUE )
+			while ( xSemaphoreTake(pxPeripheralControl->xBusSemaphore, ( TickType_t ) 1 ) != pdTRUE )
 				taskYIELD();
 			break;
 		case ioctlRELEASE_BUS_SEMPH:
@@ -468,7 +468,7 @@ u16 *p;
 		{
 			case ioctlOBTAIN_BUS_SEMPH:
 				// Espero el semaforo en forma persistente.
-				while ( xSemaphoreTake(pxPeripheralControl->xBusSemaphore, ( TickType_t ) 10 ) != pdTRUE )
+				while ( xSemaphoreTake(pxPeripheralControl->xBusSemaphore, ( TickType_t ) 1 ) != pdTRUE )
 					taskYIELD();
 				break;
 			case ioctlRELEASE_BUS_SEMPH:

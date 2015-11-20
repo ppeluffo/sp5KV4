@@ -13,6 +13,7 @@
 //#define DEBUG_FF
 
 static u08 pv_memChecksum( char *buff, u08 limit );
+//static u32 a,b,c,d,e,f;
 
 //------------------------------------------------------------------------------------
 size_t FF_fopen(void)
@@ -271,7 +272,9 @@ size_t xReturn = 0U;
 u08 rdCheckSum;
 
 	// Lo primero es obtener el semaforo del I2C
+//	a = xTaskGetTickCount();
 	FreeRTOS_ioctl(&pdI2C,ioctlOBTAIN_BUS_SEMPH, NULL);
+//	b = xTaskGetTickCount();
 	FCB.ff_stat.errno = pdFF_ERRNO_NONE;
 
 	// Si la memoria esta vacia salgo ( todos los registros libres )
@@ -305,7 +308,9 @@ u08 rdCheckSum;
 	val = FF_ADDR_START + FCB.ff_stat.RD * FF_RECD_SIZE;
 	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
 	// Por ultimo leo la memoria: un pagina entera, (recd) 64 bytes.
+//	c = xTaskGetTickCount();
 	xReturn = FreeRTOS_read(&pdI2C, &FCB.ff_buffer, FF_RECD_SIZE);
+//	d = xTaskGetTickCount();
 	// Avanzo el puntero de RD en modo circular siempre !!
 	FCB.ff_stat.RD = (++FCB.ff_stat.RD == FF_MAX_RCDS) ?  0 : FCB.ff_stat.RD;
 
@@ -323,6 +328,7 @@ u08 rdCheckSum;
 	// Verifico los datos leidos ( checksum )
 	// El checksum es solo del dataFrame por eso paso dicho size.
 	rdCheckSum = pv_memChecksum(FCB.ff_buffer, xSize );
+//	e = xTaskGetTickCount();
 	if ( rdCheckSum != FCB.ff_buffer[xSize] ) {
 		FCB.ff_stat.errno = pdFF_ERRNO_RDCKS;
 		xReturn = 0U;
@@ -342,6 +348,10 @@ u08 rdCheckSum;
 quit:
 	// libero los semaforos
 	FreeRTOS_ioctl(&pdI2C,ioctlRELEASE_BUS_SEMPH, NULL);
+
+//	snprintf_P( debug_printfBuff,sizeof(debug_printfBuff),PSTR("DEBUG RD:[%06lu][%06lu][%06lu][%06lu][%06lu]\r\n\0"),a,b,c,d,e  );
+//	FreeRTOS_write( &pdUART1, debug_printfBuff, sizeof(debug_printfBuff) );
+
 	return(xReturn);
 }
 //------------------------------------------------------------------------------------

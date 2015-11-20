@@ -10,7 +10,15 @@
  * 1- La primera vez que se conecta, el router indica 'destination unreachable'.
  * Para acortar los tiempos, tal vez el modem debiera en vez de espera, reintentar el comando.
  *
- * 2- Watchgog.
+ * 2- Watchgog
+ * Guardo el estado por el que me reseteo y lo mando en el frame de INIT.
+ *
+ * 3- Tiempos:
+ * La causa del delay en las operaciones de memoria viene por un lado por la espera de los
+ * semaforos que incorporaba 10 ticks, y por otro lado en la espera de las respuestas del I2C que
+ * incorporaba otros 10 ticks a c/u.
+ * Lo soluciono bajando todo a 1 tick.
+ *
  *
  * ----------------------------------------------------------------------------------------------------------------
  */

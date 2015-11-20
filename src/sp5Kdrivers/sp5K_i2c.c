@@ -380,13 +380,15 @@ portTickType xTicksToWait = 10;
 	vTaskSetTimeOutState( &xTimeOut );
 
 	// wait for i2c interface to complete operation
-	while( !(TWCR & (1<<TWINT)) ) {
-		taskYIELD();
-		if( xTaskCheckForTimeOut( &xTimeOut, &xTicksToWait ) != pdFALSE ) {
+	while( !(TWCR & (1<<TWINT)) )
+		;
+//	{
+//		taskYIELD();
+//		if( xTaskCheckForTimeOut( &xTimeOut, &xTicksToWait ) != pdFALSE ) {
 			/* Timed out before the wanted number of bytes were available, exit the loop. */
-			return(FALSE);
-		}
-	}
+//			return(FALSE);
+//		}
+//	}
 	return(TRUE);
 }
 //------------------------------------------------------------------------------------
