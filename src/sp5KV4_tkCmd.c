@@ -26,7 +26,7 @@ void pv_cmdRdDIN(void);
 void pv_cmdRdTERMSW(void);
 void pv_cmdRdDefaults(void);
 s08 pv_cmdWrDebugLevel(u08 *s);
-s08 pv_cmdWrWrkMode(u08 *s0, u08 *s1);
+s08 pv_cmdWrkMode(u08 *s0, u08 *s1);
 s08 pv_cmdWrEE(u08 *s0, u08 *s1);
 s08 pv_cmdWrRtc(u08 *s);
 static void pv_readMemory(void);
@@ -434,9 +434,10 @@ StatBuffer_t pxFFStatBuffer;
 
 	/* Consignas */
 	if ( systemVars.consigna.status == CONSIGNA_ON ) {
-		pos = snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  consignas: [chVA=%d] [chVB=%d]"),systemVars.consigna.chVA,systemVars.consigna.chVB);
-		pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("  C.Dia:[%04d]"), u_convertMINS2hhmm( systemVars.consigna.horaConsDia ) );
-		pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("  C.Noc:[%04d]\r\n\0"), u_convertMINS2hhmm( systemVars.consigna.horaConsNoc ));
+		pos = snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  consignas:"));
+		pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("  C.Dia:[%04d]\0"), u_convertMINS2hhmm( systemVars.consigna.horaConsDia ) );
+		pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("  C.Noc:[%04d]\0"), u_convertMINS2hhmm( systemVars.consigna.horaConsNoc ));
+		pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("  [chVA=%d] [chVB=%d]\r\n\0"), systemVars.consigna.chVA,systemVars.consigna.chVB);
 	} else {
 		snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  consignas: OFF\r\n\0"));
 	}
@@ -659,7 +660,7 @@ u08 argc;
 
 	/* WRKMODE */
 	if (!strcmp_P( strupr(argv[1]), PSTR("WRKMODE\0"))) {
-		retS = pv_cmdWrWrkMode(argv[2],argv[3]);
+		retS = pv_cmdWrkMode(argv[2],argv[3]);
 		retS ? pv_snprintfP_OK() : 	pv_snprintfP_ERR();
 		return;
 	}
@@ -760,8 +761,8 @@ u08 argc;
 	// CONSIGNA
 	// consigna {on|off} hhmm1,hhmm2,ch1,ch2
 	if (!strcmp_P( strupr(argv[1]), PSTR("CONSIGNA\0"))) {
-		if (!strcmp_P( strupr(argv[2]), PSTR("ON"))) { u_configConsignas( CONSIGNA_OFF,argv[3],argv[4], atoi(argv[5]),atoi(argv[6])); }
-		if (!strcmp_P( strupr(argv[2]), PSTR("OFF"))) { u_configConsignas( CONSIGNA_ON,argv[3],argv[4], atoi(argv[5]),atoi(argv[6])); }
+		if (!strcmp_P( strupr(argv[2]), PSTR("ON"))) { u_configConsignas( CONSIGNA_ON,argv[3],argv[4], atoi(argv[5]),atoi(argv[6])); }
+		if (!strcmp_P( strupr(argv[2]), PSTR("OFF"))) { u_configConsignas( CONSIGNA_OFF,argv[3],argv[4], atoi(argv[5]),atoi(argv[6])); }
 		pv_snprintfP_OK();
 		return;
 	}
@@ -1038,7 +1039,7 @@ s08 retS = FALSE;
 	return(retS);
 }
 /*------------------------------------------------------------------------------------*/
-s08 pv_cmdWrWrkMode(u08 *s0, u08 *s1)
+s08 pv_cmdWrkMode(u08 *s0, u08 *s1)
 {
 s08 retS = FALSE;
 

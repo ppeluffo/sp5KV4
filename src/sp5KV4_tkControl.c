@@ -102,8 +102,6 @@ void pv_flashLeds(void)
 
 static u08 l_timer = 1;
 
-	wdgStatus.controlTR = 0;
-
 	if (l_timer-- > 0 )
 		return;
 
@@ -157,8 +155,6 @@ void pv_checkWdg(void )
 
 static u08 l_timer = 1;
 
-	wdgStatus.controlTR = 1;
-
 	if (l_timer-- > 0 )
 		return;
 
@@ -176,8 +172,6 @@ void pv_dailyReset(void)
 
 const u32 RESET_SECS = 86400;	// 24hs*60m*60s Segundos en 24hs.
 static u32 resetCounter = 0;
-
-	wdgStatus.controlTR = 2;
 
 	resetCounter += 1;
 	if ( resetCounter > RESET_SECS ) {

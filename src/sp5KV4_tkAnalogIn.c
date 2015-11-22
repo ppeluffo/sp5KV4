@@ -252,8 +252,6 @@ static int trD00(void)
 
 
 	// Init (load parameters) & start pollTimer
-	wdgStatus.analogTR = 0;
-
 	AN_flags.starting = FALSE;
 
 	pv_AinLoadParameters();
@@ -278,7 +276,6 @@ static int trD01(void)
 	// MSG de autoreload
 	// tkdST_STANDBY->tkdST_STANDBY
 
-	wdgStatus.analogTR = 1;
 	AN_flags.msgReload = FALSE;
 
 	// Init (load parameters) & start pollTimer
@@ -305,8 +302,6 @@ static int trD02(void)
 {
 	// tkdST_STANDBY->tkdST_PWRSETTLE
 
-	wdgStatus.analogTR = 2;
-
 	AN_flags.start2poll = FALSE;
 	// Inicio el contador de segundos para que se estabilizen las fuentes.
 	AN_counters.secs2pwrSettle = SECS2PWRSETTLE;
@@ -325,8 +320,6 @@ static int trD03(void)
 	// tkdST_PWRSETTLE->tkdST_PWRSETTLE
 	// Espero 5s. que se estabilizen las fuentes.
 
-	wdgStatus.analogTR = 3;
-
 	if ( AN_counters.secs2pwrSettle > 0 ) {
 		vTaskDelay( ( TickType_t)( 1000 / portTICK_RATE_MS ) );
 		AN_counters.secs2pwrSettle--;
@@ -341,8 +334,6 @@ static int trD04(void)
 	// tkdST_PWRSETTLE->tkdST_POLLING
 
 u16 adcRetValue;
-
-	wdgStatus.analogTR = 4;
 
 	AN_counters.nroPoleos = CICLOS_POLEO;
 
@@ -365,8 +356,6 @@ static int trD05(void)
 	// Poleo
 
 u16 adcRetValue;
-
-	wdgStatus.analogTR = 5;
 
 	// Dummy convert para prender el ADC ( estabiliza la medida).
 	ADS7827_readCh0( &adcRetValue);
@@ -428,8 +417,6 @@ u16 pos = 0;
 size_t bWrite;
 StatBuffer_t pxFFStatBuffer;
 
-	wdgStatus.analogTR = 6;
-
 	//  En modo discreto debo apagar sensores
 	if ( (systemVars.pwrMode == PWR_DISCRETO ) && ( systemVars.wrkMode == WK_NORMAL )) {
 		MCP_setSensorPwr( 0 );
@@ -474,7 +461,7 @@ StatBuffer_t pxFFStatBuffer;
 	while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 1 ) != pdTRUE )
 		taskYIELD();
 
-	pos = snprintf_P( aIn_printfBuff, sizeof(aIn_printfBuff), PSTR("POLL-> frame::{" ));
+	pos = snprintf_P( aIn_printfBuff, sizeof(aIn_printfBuff), PSTR("frame::{" ));
 
 	// Inserto el timeStamp.
 	RTC_read(&Aframe.rtc);
@@ -517,12 +504,20 @@ StatBuffer_t pxFFStatBuffer;
 		if ( bWrite != sizeof(Aframe) ) {
 			snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("WR ERROR: (%d)\r\n\0"),pxFFStatBuffer.errno);
 			FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
-		} else {
-			// Mem.stats
-			pos = snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR(" MEM [%d/%d/%d][%d/%d]\r\n\0"), pxFFStatBuffer.HEAD,pxFFStatBuffer.RD, pxFFStatBuffer.TAIL,pxFFStatBuffer.rcdsFree,pxFFStatBuffer.rcds4del);
-			FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
+			goto quit;
 		}
 	}
+
+	// En modo normal o monitor frame muestro el dato
+	if ( systemVars.wrkMode == WK_NORMAL ) {
+		// En modo normal agrego el mem.stats
+		pos = snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR(" MEM [%d/%d/%d][%d/%d]\r\n\0"), pxFFStatBuffer.HEAD,pxFFStatBuffer.RD, pxFFStatBuffer.TAIL,pxFFStatBuffer.rcdsFree,pxFFStatBuffer.rcds4del);
+		FreeRTOS_write( &pdUART1, "POLL->\0", sizeof("POLL->\0") );
+	} else if ( systemVars.wrkMode == WK_MONITOR_FRAME ) {
+		pos = snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR("\r\n\0"));
+		FreeRTOS_write( &pdUART1, "MON->\0", sizeof("MON->\0") );
+	}
+	FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
 
 quit:
 	pv_AINprintExitMsg(6);

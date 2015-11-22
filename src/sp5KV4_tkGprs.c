@@ -384,8 +384,6 @@ static void GPRS_getNextEvent(u08 state)
 
 u08 i;
 
-	wdgStatus.gprsTR = 0;
-
 	// Inicializo la lista de eventos.
 	for ( i=0; i < gEVENT_COUNT; i++ ) {
 		gEventos[i] = FALSE;
@@ -492,8 +490,6 @@ static void gTR_reloadConfig(void)
 	// seteado la flag de msgReload.
 	// RELOAD_CONFIG -> gSST_OFF_Standby
 
-	wdgStatus.gprsTR = 1;
-
 	pv_GPRSloadParameters();
 
 	// Apago el modem y dejo
@@ -536,8 +532,6 @@ static void gTR_reloadConfig(void)
 static void SM_off(void)
 {
 	// Maquina de estados del estado OFF.( MODEM APAGADO)
-
-	wdgStatus.gprsTR = 2;
 
 	if ( gEventos[evRELOADCONFIG] ) { gTR_reloadConfig(); return; }
 
@@ -599,8 +593,6 @@ static int gTR_o00(void)
 	// Inicializo el sistema aqui
 	// gST_INIT -> gSST_OFF_Standby
 
-	wdgStatus.gprsTR = 3;
-
 	pv_GPRSloadParameters();
 
 	// Apago el modem y dejo
@@ -633,8 +625,6 @@ static int gTR_o01(void)
 	// gSST_OFF_Standby ->  -> gST_Entry
 	// Msg.reload
 
-	wdgStatus.gprsTR = 4;
-
 	tkGprs_state = gST_OFF;
 
 	pv_GPRSprintExitMsg("o01\0");
@@ -647,8 +637,6 @@ static int gTR_o02(void)
 
 	// gSST_OFF_Standby -> gSST_OFF_prenderModem_01
 
-	wdgStatus.gprsTR = 5;
-
 	GPRS_flags.start2dial = FALSE;
 	GPRS_counters.qTryes = 3;
 
@@ -660,8 +648,6 @@ static int gTR_o03(void)
 {
 	// gSST_OFF_prenderModem_01 -> gSST_OFF_prenderModem_02
 	// Prendo el modem HW y espero estabilizar la fuente
-
-	wdgStatus.gprsTR = 6;
 
 	MODEM_HWpwrOff();
 	MODEM_SWswitchHIGH();
@@ -681,8 +667,6 @@ static int gTR_o04(void)
 
 	// gSST_OFF_prenderModem_02 -> gSST_OFF_prenderModem_03
 	// Hago un switch on/off y espero 5s que se prenda
-
-	wdgStatus.gprsTR = 7;
 
 	GPRS_counters.cTimer = 5;		// espera en c/intento de settle time
 
@@ -709,8 +693,6 @@ static int gTR_o05(void)
 
 size_t pos;
 
-	wdgStatus.gprsTR = 8;
-
 	FreeRTOS_ioctl( &pdUART0,ioctl_UART_CLEAR_RX_BUFFER, NULL);
 	FreeRTOS_ioctl( &pdUART0,ioctl_UART_CLEAR_TX_BUFFER, NULL);
 	FreeRTOS_write( &pdUART0, "AT\r\0", sizeof("AT\r\0") );
@@ -730,7 +712,6 @@ static int gTR_o06(void)
 {
 	// gSST_OFF_prenderModem_03 -> gSST_OFF_prenderModem_03
 	// Espero 5s luego del sw on/off
-	wdgStatus.gprsTR = 9;
 
 	if ( GPRS_counters.cTimer > 0 ) {
 		vTaskDelay( ( TickType_t)( 1000 / portTICK_RATE_MS ) );
@@ -745,8 +726,6 @@ static int gTR_o07(void)
 {
 	// gSST_OFF_prenderModem_04 -> EXIT STATE
 
-	wdgStatus.gprsTR = 10;
-
 	GPRS_flags.modemPrendido = TRUE;
 
 	// CAMBIO DE ESTADO:
@@ -760,8 +739,6 @@ static int gTR_o08(void)
 {
 	// gSST_OFF_prenderModem_04 -> gSST_OFF_prenderModem_05
 
-	wdgStatus.gprsTR = 11;
-
 	if ( GPRS_counters.pTryes > 0 ) {
 		vTaskDelay( ( TickType_t)( 1000 / portTICK_RATE_MS ) );
 		GPRS_counters.pTryes--;
@@ -774,7 +751,6 @@ static int gTR_o08(void)
 static int gTR_o09(void)
 {
 	// gSST_OFF_prenderModem_05 -> gSST_OFF_prenderModem_06
-	wdgStatus.gprsTR = 12;
 
 	if ( GPRS_counters.qTryes > 0 ) {
 		GPRS_counters.qTryes--;
@@ -787,7 +763,6 @@ static int gTR_o09(void)
 static int gTR_o10(void)
 {
 	// gSST_OFF_prenderModem_05 -> gSST_OFF_prenderModem_02
-	wdgStatus.gprsTR = 13;
 
 	pv_GPRSprintExitMsg("o10\0");
 	return(gSST_OFF_prenderModem_02);
@@ -796,7 +771,6 @@ static int gTR_o10(void)
 static int gTR_o11(void)
 {
 	// gSST_OFF_prenderModem_06 -> gSST_OFF_prenderModem_01
-	wdgStatus.gprsTR = 14;
 
 	pv_GPRSprintExitMsg("o11\0");
 	return(gSST_OFF_prenderModem_01);
@@ -805,7 +779,6 @@ static int gTR_o11(void)
 static int gTR_o12(void)
 {
 	// gSST_OFF_prenderModem_06 ->  gSST_OFF_Standby
-	wdgStatus.gprsTR = 15;
 
 	pv_GPRSprintExitMsg("t12\0");
 	return( gSST_OFF_Entry);
@@ -820,7 +793,6 @@ static int gTR_o12(void)
 static void SM_onOffline(void)
 {
 	// Maquina de estados del estado ON-OFFLINE.
-	wdgStatus.gprsTR = 16;
 
 	if ( gEventos[evRELOADCONFIG] ) { gTR_reloadConfig(); return; }
 
@@ -924,7 +896,6 @@ static int gTR_c01(void)
 {
 	// gSST_ONoffline_Entry -> gSST_ONoffline_Config_01
 	// Configuro el modem.
-	wdgStatus.gprsTR = 17;
 
 	snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("\r\n%s: GPRS configure:\r\n\0"), u_now() );
 	FreeRTOS_write( &pdUART1, gprs_printfBuff, sizeof(gprs_printfBuff) );
@@ -984,8 +955,6 @@ char *ts = NULL;
 u08 modemBand;
 size_t xBytes;
 
-	wdgStatus.gprsTR = 18;
-
 	// Vemos si la banda configurada es la correcta. Si no la reconfiguro.
 	FreeRTOS_ioctl( &pdUART0,ioctl_UART_CLEAR_RX_BUFFER, NULL);
 	FreeRTOS_ioctl( &pdUART0,ioctl_UART_CLEAR_TX_BUFFER, NULL);
@@ -1032,7 +1001,6 @@ static int gTR_c03(void)
 {
 	// Debo reiniciar el modem para que tome la nueva banda
 	// gSST_ONoffline_Config_02 -> gST_OFF
-	wdgStatus.gprsTR = 19;
 
 	tkGprs_state = gST_OFF;
 
@@ -1044,7 +1012,6 @@ static int gTR_n01(void)
 {
 	// gSST_ONoffline_Config_02 -> gSST_ONoffline_Net_01
 	// Inicializo contador de cuantas veces voy a preguntar por la NET
-	wdgStatus.gprsTR = 20;
 
 	snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("\r\n%s: GPRS Net Attach:\r\n\0"), u_now());
 	FreeRTOS_write( &pdUART1, gprs_printfBuff, sizeof(gprs_printfBuff) );
@@ -1058,7 +1025,6 @@ static int gTR_n01(void)
 static int gTR_n02(void)
 {
 	// gSST_ONoffline_Net_01 -> gSST_ONoffline_Net_02
-	wdgStatus.gprsTR = 21;
 
 	// Pregunto por la NET y espero 6s la respuesta.
 	GPRS_counters.cTimer = 6;	// a intervalos de 6s entre consultas
@@ -1079,8 +1045,6 @@ static int gTR_n03(void)
 
 size_t pos;
 
-	wdgStatus.gprsTR = 22;
-
 	// Leo y Evaluo la respuesta al comando AT+CREG ( home network, NOT roaming !!! )
 	if ( pv_GPRSrspIs("+CREG: 0,1\0", &pos ) == TRUE ) {
 		GPRSrsp = RSP_CREG;
@@ -1097,7 +1061,6 @@ static int gTR_n04(void)
 {
 	// gSST_ONoffline_Net_02 -> gSST_ONoffline_Net_02
 	// Espero 6s que expire cTimer para evaluar la respuesta a CNET
-	wdgStatus.gprsTR = 23;
 
 	if ( GPRS_counters.cTimer > 0 ) {
 		vTaskDelay( ( TickType_t)( 1000 / portTICK_RATE_MS ) );
@@ -1113,7 +1076,6 @@ static int gTR_n05(void)
 {
 	// gSST_ONoffline_Net_03 -> gSST_ONoffline_Net_04
 	// No obtuve respuesta correcta de CNET: reintento
-	wdgStatus.gprsTR = 24;
 
 	if ( GPRS_counters.pTryes > 0 ) {
 		GPRS_counters.pTryes--;
@@ -1128,7 +1090,6 @@ static int gTR_n06(void)
 {
 	// gSST_ONoffline_Net_04 -> gSST_ONoffline_Net_01
 	// No obtuve respuesta correcta de CNET: reintento
-	wdgStatus.gprsTR = 25;
 
 	pv_GPRSprintExitMsg("n06\0");
 	return(gSST_ONoffline_Net_01);
@@ -1138,7 +1099,6 @@ static int gTR_n07(void)
 {
 	// gSST_ONoffline_Net_04 -> gST_OFF
 	// No pude conectarme a la red: salgo
-	wdgStatus.gprsTR = 26;
 
 	tkGprs_state = gST_OFF;
 
@@ -1150,7 +1110,6 @@ static int gTR_s01(void)
 {
 	// gSST_ONoffline_Net_03 -> gSST_ONoffline_Sqe_01
 	// Obtuve respuesta correcta de CNET: paso a leer/monitorear el SQE
-	wdgStatus.gprsTR = 27;
 
 	snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("\r\n%s: query SQE:\r\n\0"), u_now());
 	FreeRTOS_write( &pdUART1, gprs_printfBuff, sizeof(gprs_printfBuff) );
@@ -1163,7 +1122,6 @@ static int gTR_s02(void)
 {
 	// gSST_ONoffline_Sqe_01 -> gSST_ONoffline_Sqe_02
 	// Leo el SQE
-	wdgStatus.gprsTR = 28;
 
 	GPRS_counters.cTimer = 5;
 	GPRSrsp = RSP_NONE;
@@ -1180,7 +1138,6 @@ static int gTR_s03(void)
 {
 	// gSST_ONoffline_Sqe_02 -> gSST_ONoffline_Sqe_02
 	// Espero 6s que expire cTimer para evaluar la respuesta a SQE
-	wdgStatus.gprsTR = 29;
 
 	if ( GPRS_counters.cTimer > 0 ) {
 		vTaskDelay( ( TickType_t)( 1000 / portTICK_RATE_MS ) );
@@ -1199,8 +1156,6 @@ static int gTR_s04(void)
 size_t pos;
 char csqBuffer[32];
 char *ts = NULL;
-
-	wdgStatus.gprsTR = 30;
 
 	if ( pv_GPRSrspIs("CSQ:\0", &pos ) == TRUE ) {
 
@@ -1225,7 +1180,6 @@ static int gTR_s05(void)
 {
 	// gSST_ONoffline_Sqe_03 -> gSST_ONoffline_Sqe_01
 	// Estoy en modo monitor sqe por lo tanto vuelvo a leer el SQE
-	wdgStatus.gprsTR = 31;
 
 	//pv_GPRSprintExitMsg("s05\0");
 	return(gSST_ONoffline_Sqe_01);
@@ -1237,8 +1191,6 @@ static int gTR_i01(void)
 	// Configuro el APN.
 
 size_t xBytes;
-
-	wdgStatus.gprsTR = 32;
 
 	// APN
 	snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("\r\n%s: GPRS set APN:\r\n\0"), u_now());
@@ -1262,7 +1214,6 @@ static int gTR_i02(void)
 {
 	// gSST_ONoffline_IP_01 -> gSST_ONoffline_IP_02
 	// Pido la IP.
-	wdgStatus.gprsTR = 33;
 
 	snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("\r\n[%s] GPRS ask IP:\r\n\0"), u_now());
 	FreeRTOS_write( &pdUART1, gprs_printfBuff, sizeof(gprs_printfBuff) );
@@ -1286,7 +1237,6 @@ static int gTR_i02(void)
 static int gTR_i03(void)
 {
 	// gSST_ONoffline_IP_02 -> gSST_ONoffline_IP_02
-	wdgStatus.gprsTR = 34;
 
 	if ( GPRS_counters.cTimer > 0 ) {
 		vTaskDelay( ( TickType_t)( 1000 / portTICK_RATE_MS ) );
@@ -1303,8 +1253,6 @@ static int gTR_i04(void)
 	// gSST_ONoffline_IP_02 -> gSST_ONoffline_IP_03
 
 size_t pos;
-
-	wdgStatus.gprsTR = 35;
 
 	// Leo y Evaluo la respuesta al comando AT*E2IPA ( activacion de IP )
 	// La respuesta correcta es *E2IPA: 000 OK
@@ -1326,8 +1274,6 @@ static int gTR_i05(void)
 char *ts = NULL;
 int i=0;
 char c;
-
-	wdgStatus.gprsTR = 36;
 
 	FreeRTOS_ioctl( &pdUART0,ioctl_UART_CLEAR_RX_BUFFER, NULL);
 	FreeRTOS_ioctl( &pdUART0,ioctl_UART_CLEAR_TX_BUFFER, NULL);
@@ -1359,7 +1305,6 @@ char c;
 static int gTR_i06(void)
 {
 	// gSST_ONoffline_IP_03 -> gSST_ONoffline_IP_04
-	wdgStatus.gprsTR = 37;
 
 	if ( GPRS_counters.pTryes > 0 ) {
 		GPRS_counters.pTryes--;
@@ -1373,7 +1318,6 @@ static int gTR_i06(void)
 static int gTR_i07(void)
 {
 	// gSST_ONoffline_IP_04 -> gSST_ONoffline_IP_02
-	wdgStatus.gprsTR = 38;
 
 	GPRS_counters.cTimer = 10;
 
@@ -1385,7 +1329,6 @@ static int gTR_i07(void)
 static int gTR_i08(void)
 {
 	// gSST_ONoffline_IP_04 -> gSST_ONoffline_IP_05
-	wdgStatus.gprsTR = 39;
 
 	if ( GPRS_counters.qTryes > 0 ) {
 		GPRS_counters.qTryes--;
@@ -1398,7 +1341,6 @@ static int gTR_i08(void)
 static int gTR_i09(void)
 {
 	// gSST_ONoffline_IP_05 -> gSST_ONoffline_IP_01
-	wdgStatus.gprsTR = 40;
 	GPRS_counters.pTryes = 3;
 
 	pv_GPRSprintExitMsg("i09\0");
@@ -1408,7 +1350,6 @@ static int gTR_i09(void)
 static int gTR_i10(void)
 {
 	// gSST_ONoffline_IP_04 -> gSST_OFF
-	wdgStatus.gprsTR = 41;
 
 	tkGprs_state = gST_OFF;
 
@@ -1425,7 +1366,6 @@ static int gTR_i10(void)
 static void SM_onOpenSocket(void)
 {
 	// Maquina de estados del estado ON-OPENSOCKET
-	wdgStatus.gprsTR = 42;
 
 	if ( gEventos[evRELOADCONFIG] ) { gTR_reloadConfig(); return; }
 
@@ -1503,7 +1443,6 @@ static void SM_onOpenSocket(void)
 static int gTR_k01(void)
 {
 	// gSST_ONopenSocket_Entry -> gSST_ONopenSocket_01
-	wdgStatus.gprsTR = 43;
 
 	GPRS_counters.qTryes = 3;	// Envio el comando OPENSOCKET hasta 3 veces
 	GPRS_counters.pTryes = 6;	// C/vez pregunto 6 veces
@@ -1534,8 +1473,6 @@ static int gTR_k02(void)
 
 size_t xBytes;
 
-	wdgStatus.gprsTR = 44;
-
 	xBytes = snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("AT*E2IPO=1,\"%s\",%s\r\n\0"),systemVars.serverAddress,systemVars.serverPort);
 	FreeRTOS_ioctl( &pdUART0,ioctl_UART_CLEAR_RX_BUFFER, NULL);
 	FreeRTOS_ioctl( &pdUART0,ioctl_UART_CLEAR_TX_BUFFER, NULL);
@@ -1556,7 +1493,6 @@ static int gTR_k03(void)
 {
 	// gSST_ONopenSocket_02 -> gSST_ONopenSocket_02
 	// Espera 1s hasta llegar a 5s y consltar
-	wdgStatus.gprsTR = 45;
 
 	if ( GPRS_counters.cTimer > 0 ) {
 		vTaskDelay( ( TickType_t)( 1000 / portTICK_RATE_MS ) );
@@ -1574,8 +1510,6 @@ static int gTR_k04(void)
 	// Chequeo la respuesta del socket.
 
 size_t pos;
-
-	wdgStatus.gprsTR = 46;
 
 	// Leo y Evaluo la respuesta al comando AT*E2IPO ( open socket )
 	// La respuesta correcta debe ser CONNECT
@@ -1599,7 +1533,6 @@ static int gTR_k05(void)
 {
 	// gSST_ONopenSocket_03 -> gSST_ONopenSocket_04
 	//  El socket no dio ERROR. Puede que tampoco halla mandado nada aun.
-	wdgStatus.gprsTR = 47;
 
 	//FreeRTOS_write( &pdUART1, ".\0", sizeof(".\0") );
 	pv_GPRSprintExitMsg("k05\0");
@@ -1610,7 +1543,6 @@ static int gTR_k06(void)
 {
 	// gSST_ONopenSocket_03 -> gSST_ONopenSocket_06
 	// El socket dio ERROR.
-	wdgStatus.gprsTR = 48;
 
 	if ( GPRS_counters.qTryes > 0 ) {
 		GPRS_counters.qTryes--;
@@ -1624,7 +1556,6 @@ static int gTR_k07(void)
 {
 	// gSST_ONopenSocket_04 -> gSST_ONopenSocket_07
 	// El socket esta abierto ya que respondio con un CONNECT. Paso a enviar INIT o DATA
-	wdgStatus.gprsTR = 49;
 
 	pv_GPRSprintExitMsg("k07\0");
 	return(gSST_ONopenSocket_07);
@@ -1635,7 +1566,6 @@ static int gTR_k08(void)
 {
 	// gSST_ONopenSocket_04 -> gSST_ONopenSocket_05
 	// Tampoco respondio CONNECT. Vuelvo a esperar otros 5s para reconsultar.
-	wdgStatus.gprsTR = 50;
 
 	if ( GPRS_counters.pTryes > 0 ) {
 		GPRS_counters.pTryes--;
@@ -1649,7 +1579,6 @@ static int gTR_k09(void)
 {
 	// gSST_ONopenSocket_05 -> gSST_ONopenSocket_06
 	// No respondio en 1 ciclo. Reintento enviar el comando
-	wdgStatus.gprsTR = 51;
 
 	if ( GPRS_counters.qTryes > 0 ) {
 		GPRS_counters.qTryes--;
@@ -1663,7 +1592,6 @@ static int gTR_k10(void)
 {
 	// gSST_ONopenSocket_05 -> gSST_ONopenSocket_02
 	// Espero otros 5s.
-	wdgStatus.gprsTR = 52;
 
 	GPRS_counters.cTimer = 5;
 
@@ -1675,7 +1603,6 @@ static int gTR_k11(void)
 {
 	// gSST_ONopenSocket_06 -> gSST_ONopenSocket_01
 	// Reintento mandar de nuevo el comando para abir el socket
-	wdgStatus.gprsTR = 53;
 
 	GPRS_counters.pTryes = 3;
 	vTaskDelay( ( TickType_t)( 1000 / portTICK_RATE_MS ) );
@@ -1688,7 +1615,6 @@ static int gTR_k12(void)
 {
 	// gSST_ONopenSocket_06 -> gSST_OFF
 	// El socket no abrio despues de varios reintentos.
-	wdgStatus.gprsTR = 54;
 
 	tkGprs_state = gST_OFF;
 
@@ -1700,8 +1626,6 @@ static int gTR_k13(void)
 {
 	// gSST_ONopenSocket_17 -> gST_ONinitFrame
 	// El socket abrio pero necesito mandar un INIT
-	wdgStatus.gprsTR = 55;
-
 	tkGprs_state = gST_ONinitFrame;
 
 	pv_GPRSprintExitMsg("k13\0");
@@ -1713,7 +1637,6 @@ static int gTR_k14(void)
 {
 	// gSST_ONopenSocket_17 -> gST_ONdata
 	// El socket abrio y no necesito mandar INIT sino que paso al DATA
-	wdgStatus.gprsTR = 56;
 
 	tkGprs_state = gST_ONdata;
 
@@ -1766,7 +1689,6 @@ static int gTR_k17(void)
 static void SM_onInitFrame(void)
 {
 	// Maquina de estados del estado ON-INITFRAME
-	wdgStatus.gprsTR = 57;
 
 	if ( gEventos[evRELOADCONFIG] ) { gTR_reloadConfig(); return; }
 
@@ -1824,7 +1746,6 @@ static void SM_onInitFrame(void)
 static int gTR_f01(void)
 {
 	// gSST_ONinitframe_01 -> gSST_ONinitframe_01
-	wdgStatus.gprsTR = 58;
 
 	snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("\r\n%s: GPRS init FRAME(%d):\r\n\0"), u_now(), GPRS_counters.cInits );
 	FreeRTOS_write( &pdUART1, gprs_printfBuff, sizeof(gprs_printfBuff) );
@@ -1836,7 +1757,6 @@ static int gTR_f01(void)
 static int gTR_f02(void)
 {
 	// gSST_ONinitframe_01 -> gSST_ONinitframe_02
-	wdgStatus.gprsTR = 59;
 
 	if ( GPRS_counters.cInits > 0 ) {
 		GPRS_counters.cInits--;
@@ -1856,8 +1776,6 @@ static int gTR_f03(void)
 
 u16 pos = 0;
 u08 i;
-
-	wdgStatus.gprsTR = 60;
 
 	GPRS_counters.pTryes = 6;	// Pregunto hasta 6 veces
 	GPRS_counters.cTimer = 3;	// Pregunto c/3secs
@@ -1946,7 +1864,6 @@ u08 i;
 static int gTR_f04(void)
 {
 	// gSST_ONinitframe_02 -> gSST_OFF
-	wdgStatus.gprsTR = 61;
 
 	tkGprs_state = gST_OFF;
 
@@ -1958,7 +1875,6 @@ static int gTR_f05(void)
 {
 	// gSST_ONinitframe_03 -> gSST_ONinitframe_03
 	// Espera
-	wdgStatus.gprsTR = 62;
 
 	if ( GPRS_counters.cTimer > 0 ) {
 		vTaskDelay( ( TickType_t)( 1000 / portTICK_RATE_MS ) );
@@ -1978,7 +1894,6 @@ size_t pos;
 
 	// Leo y Evaluo la respuesta al comando AT*E2IPO ( open socket )
 	// La respuesta correcta debe ser CONNECT
-	wdgStatus.gprsTR = 63;
 
 	GPRSrsp = RSP_NONE;
 
@@ -2004,8 +1919,6 @@ static int gTR_f07(void)
 	// Cierro el socket
 
 u08 saveFlag = 0;
-
-	wdgStatus.gprsTR = 64;
 
 	// Proceso la respuesta del INIT para reconfigurar los parametros
 	pv_GPRSprocessServerClock();
@@ -2061,7 +1974,6 @@ static int gTR_f08(void)
 {
 	// gSST_ONinitframe_04 -> gS_SOCKET
 	// Recibi un ERROR: cierro el socket
-	wdgStatus.gprsTR = 65;
 
 	// Cambio de estado
 	tkGprs_state = gST_ONopenSocket;
@@ -2074,7 +1986,6 @@ static int gTR_f09(void)
 {
 	// gSST_ONinitframe_04 -> gS_SOCKET
 	// Recibi un NO CARRIER: cierro el socket
-	wdgStatus.gprsTR = 66;
 
 	// Cambio de estado
 	tkGprs_state = gST_ONopenSocket;
@@ -2087,7 +1998,6 @@ static int gTR_f10(void)
 {
 	// gSST_ONinitframe_04 -> gS_SOCKET
 	// Recibi un NO CARRIER: cierro el socket
-	wdgStatus.gprsTR = 66;
 
 	// Cambio de estado
 	tkGprs_state = gST_ONopenSocket;
@@ -2099,7 +2009,6 @@ static int gTR_f10(void)
 static int gTR_f11(void)
 {
 	// gSST_ONinitframe_04 ->  gSST_ONinitframe_05
-	wdgStatus.gprsTR = 67;
 
 	if ( GPRS_counters.pTryes > 0 ) {
 		GPRS_counters.pTryes--;
@@ -2113,7 +2022,6 @@ static int gTR_f12(void)
 {
 	// gSST_ONinitframe_05 ->  gSST_ONopenSocket_Entry
 	// Expiro el tiempo de espera de respuesta. Cierro el socket
-	wdgStatus.gprsTR = 68;
 
 	// Cambio de estado
 	tkGprs_state = gST_ONopenSocket;
@@ -2124,7 +2032,6 @@ static int gTR_f12(void)
 static int gTR_f13(void)
 {
 	// gSST_ONinitframe_05 -> gSST_ONinitframe_03
-	wdgStatus.gprsTR = 69;
 
 	pv_GPRSprintExitMsg("f13\0");
 	return(gSST_ONinitframe_03);
@@ -2453,7 +2360,7 @@ StatBuffer_t pxFFStatBuffer;
 	pos += snprintf_P( &gprs_printfBuff[pos],( sizeof(gprs_printfBuff) - pos ), PSTR("%02d%02d%02d,"),Aframe.rtc.hour,Aframe.rtc.min, Aframe.rtc.sec );
 	// Valores analogicos
 	for ( channel = 0; channel < NRO_CHANNELS; channel++) {
-		pos += snprintf_P( &gprs_printfBuff[pos],( sizeof(gprs_printfBuff) - pos ),PSTR("%s>%.3f,"),systemVars.aChName[channel],Aframe.analogIn[channel] );
+		pos += snprintf_P( &gprs_printfBuff[pos],( sizeof(gprs_printfBuff) - pos ),PSTR("%s>%.2f,"),systemVars.aChName[channel],Aframe.analogIn[channel] );
 	}
 	// Valores digitales
 	pos += snprintf_P( &gprs_printfBuff[pos],( sizeof(gprs_printfBuff) - pos ), PSTR("%sP>%.2f,%sL>%d,"), systemVars.dChName[0],Aframe.dIn.pulses[0],systemVars.dChName[0],Aframe.dIn.level[0]);
@@ -2523,6 +2430,8 @@ static int gTR_d16(void)
 
 u08 pos = 0;
 
+	pv_GPRSprintRsp();
+
 	GPRSrsp = RSP_NONE;
 	if ( pv_GPRSrspIs("RX_OK\0", &pos ) == TRUE ) {
 		GPRSrsp =  RSP_RXOK;
@@ -2530,13 +2439,16 @@ u08 pos = 0;
 		GPRSrsp = RSP_ERROR;
 	}
 
+	// El server me pide que me resetee de modo de mandar un nuevo init y reconfigurarme
 	if ( pv_GPRSrspIs("RESET\0", &pos ) == TRUE ) {
-		// El server me pide que me resetee de modo de mandar un nuevo init y reconfigurarme
+
+		snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("Config RESET...\r\n\0" ));
+		FreeRTOS_write( &pdUART1, gprs_printfBuff, sizeof(gprs_printfBuff) );
+		vTaskDelay( ( TickType_t)( 1000 / portTICK_RATE_MS ) );
+
 		wdt_enable(WDTO_30MS);
 		while(1) {}
 	}
-
-	pv_GPRSprintRsp();
 
 	pv_GPRSprintExitMsg("d16\0");
 	return(gSST_ONdata_c2);
@@ -2714,9 +2626,16 @@ u16 now;
 		GPRS_flags.start2dial = TRUE;
 	}
 
-	// En modo service no disco
+	// En modo service no disco y debo ir al estado STANDBY
 	if ( systemVars.wrkMode == WK_SERVICE ) {
-		 xTimerStop( dialTimer, 0 );
+		while ( xTimerStop( dialTimer, 1 ) != pdPASS )
+			taskYIELD();
+	}
+
+	// En modo monitor frame  no disco y debo ir al estado STANDBY
+	if ( systemVars.wrkMode == WK_MONITOR_FRAME ) {
+		while ( xTimerStop( dialTimer, 1 ) != pdPASS )
+			taskYIELD();
 	}
 
 	// Al arrancar solo hago 3 reintentos de INIT. Agrego 1 mas para controlar
