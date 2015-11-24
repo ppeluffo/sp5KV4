@@ -462,4 +462,13 @@ RtcTimeType_t rtcDateTime;
 	snprintf_P( nowStr,sizeof(nowStr), PSTR("%02d/%02d/%02d %02d:%02d:%02d\0"),rtcDateTime.day,rtcDateTime.month,rtcDateTime.year,rtcDateTime.hour,rtcDateTime.min,rtcDateTime.sec );
 	return(nowStr);
 }
+//------------------------------------------------------------------------------------
+u08 u_readTermsw(u08 *pin)
+{
+	// El TERMSW se cablea a PD7.
+	*pin = ( TERMSW_PIN & _BV(7) ) >> 7;
+	return(TRUE);
+
+}
+//------------------------------------------------------------------------------------
 

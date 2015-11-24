@@ -55,7 +55,7 @@
 // DEFINICION DEL TIPO DE SISTEMA
 //----------------------------------------------------------------------------
 #define SP5K_REV "4.0.0"
-#define SP5K_DATE "@ 20151119"
+#define SP5K_DATE "@ 20151123a"
 
 #define SP5K_MODELO "sp5KV3 HW:avr1284P R5.0"
 #define SP5K_VERSION "FW:FRTOS8"
@@ -261,7 +261,8 @@ s08 u_saveSystemParams(void);
 s08 u_loadSystemParams(void);
 void u_loadDefaults(void);
 char *u_now(void);
-void u_setTerminal(s08 modo);
+u08 u_readTermsw(u08 *pin);
+void u_restartTimerTerminal(void);
 
 char nowStr[32];
 
@@ -312,9 +313,7 @@ s08 terminal_isApagada(void);			// Publica
 s08 terminal_isPrendida(void);			// Publica
 void terminal_restartTimer( u16 secs);	// Publica
 
-
 char debug_printfBuff[CHAR128];
-
 
 
 #endif /* SP5K_H_ */

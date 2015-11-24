@@ -24,11 +24,9 @@ void pv_cmdRdADC(void);
 void pv_cmdRdMCP(void);
 void pv_cmdRdDIN(void);
 void pv_cmdRdTERMSW(void);
-void pv_cmdRdDefaults(void);
 s08 pv_cmdWrDebugLevel(u08 *s);
 s08 pv_cmdWrkMode(u08 *s0, u08 *s1);
 s08 pv_cmdWrEE(u08 *s0, u08 *s1);
-s08 pv_cmdWrRtc(u08 *s);
 static void pv_readMemory(void);
 
 //----------------------------------------------------------------------------------------
@@ -80,7 +78,7 @@ u08 c;
 
 		// Mientras escribo comandos no apago la terminal
 		if (c=='\r') {
-//			pb_restartTimerTerminal();
+			u_restartTimerTerminal();
 		}
 
 		/* run the cmdline execution functions */
@@ -133,7 +131,7 @@ static void cmdHelpFunction(void)
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  consigna {on|off} hhmm1,hhmm2,chVA,chVB \r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
-	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  terminal {on|off}, save\r\n\0"));
+	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  save\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  (SM) mcp devId regAddr regValue\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
@@ -333,9 +331,6 @@ StatBuffer_t pxFFStatBuffer;
  	if ( systemVars.ri == 1 ) { pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("ri=OFF,\0"));}
  	if ( systemVars.termsw == 1 ) { pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("term=ON\r\n\0")); }
  	if ( systemVars.termsw == 0 ) { pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("term=OFF\r\n\0"));}
-	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
-
-	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  TerminalStatus=%d\r\n\0"), u_terminalPwrStatus() );
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 
 	// SYSTEM ---------------------------------------------------------------------------------------
@@ -764,15 +759,6 @@ u08 argc;
 	if (!strcmp_P( strupr(argv[1]), PSTR("CONSIGNA\0"))) {
 		if (!strcmp_P( strupr(argv[2]), PSTR("ON"))) { u_configConsignas( CONSIGNA_ON,argv[3],argv[4], atoi(argv[5]),atoi(argv[6])); }
 		if (!strcmp_P( strupr(argv[2]), PSTR("OFF"))) { u_configConsignas( CONSIGNA_OFF,argv[3],argv[4], atoi(argv[5]),atoi(argv[6])); }
-		pv_snprintfP_OK();
-		return;
-	}
-
-	// TERMINAL
-	// terminal {on|off}
-	if (!strcmp_P( strupr(argv[1]), PSTR("TERMINAL\0"))) {
-		if (!strcmp_P( strupr(argv[2]), PSTR("ON"))) { u_setTerminal(ON); }
-		if (!strcmp_P( strupr(argv[2]), PSTR("OFF"))) { u_setTerminal(OFF); }
 		pv_snprintfP_OK();
 		return;
 	}
@@ -1310,15 +1296,10 @@ u08 pin;
 /*------------------------------------------------------------------------------------*/
 void pv_cmdRdTERMSW(void)
 {
-s08 retS = FALSE;
 u08 pin;
 
-	retS = MCP_queryTermsw(&pin);
-	if (retS ) {
-		snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("OK\r\nTERMSW=%d\r\n\0"),pin);
-	} else {
-		snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("ERROR\r\n\0"));
-	}
+	u_readTermsw(&pin);
+	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("OK\r\nTERMSW=%d\r\n\0"),pin);
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	return;
 
