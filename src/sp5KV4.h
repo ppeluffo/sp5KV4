@@ -89,6 +89,7 @@ void tkControl(void * pvParameters);
 void tkDigitalIn(void * pvParameters);
 void tkOutput(void * pvParameters);
 void tkOutputInit(void);
+void tkControlInit(void);
 void tkAnalogIn(void * pvParameters);
 void tkAnalogInit(void);
 void tkGprs(void * pvParameters);
@@ -121,6 +122,9 @@ typedef enum { WK_IDLE = 0, WK_NORMAL = 1, WK_SERVICE = 2, WK_MONITOR_FRAME = 3,
 typedef enum { PWR_CONTINUO = 0, PWR_DISCRETO = 1 } t_pwrMode;
 typedef enum { CONSIGNA_OFF = 0, CONSIGNA_ON = 1 } t_consignaMode;
 typedef enum { modoPWRSAVE_OFF = 0, modoPWRSAVE_ON = 1 } t_pwrSave;
+
+#define PRENDIDO	TRUE
+#define APAGADO		FALSE
 
 #define NRO_CHANNELS		3
 
@@ -257,6 +261,7 @@ s08 u_saveSystemParams(void);
 s08 u_loadSystemParams(void);
 void u_loadDefaults(void);
 char *u_now(void);
+void u_setTerminal(s08 modo);
 
 char nowStr[32];
 
@@ -268,7 +273,8 @@ void u_readAnalogFrame (frameData_t *dFrame);
 s16 u_readTimeToNextPoll(void);
 
 s32 u_readTimeToNextDial(void);
-s08 u_modemPrendido(void);
+s08 u_modemPwrStatus(void);
+s08 u_terminalPwrStatus(void);
 s08 u_wrRtc(char *s);
 
 //------------------------------------------------------------------------------------
@@ -277,6 +283,8 @@ s08 u_wrRtc(char *s);
 #define P_OUT_TIMERCREATE	2
 #define P_AIN_TIMERSTART	3
 #define P_GPRS_TIMERSTART	4
+#define P_CTL_TIMERCREATE	5
+#define P_CTL_TIMERSTART	6
 
 //------------------------------------------------------------------------------------
 // WATCHDOG

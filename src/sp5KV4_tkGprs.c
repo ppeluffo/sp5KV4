@@ -20,7 +20,7 @@ static char gprs_printfBuff[CHAR256];
 TimerHandle_t dialTimer;
 
 static void pv_GPRSprintExitMsg(char *code);
-static void pv_GPRSloadParameters(void);
+static void pv_GPRSreloadTimerDial(void);
 static void pv_dialTimerCallback( TimerHandle_t pxTimer );
 char *cb_strstr(Peripheral_Control_t *UART, const char substring[], int *pos);
 static s08 pv_GPRSrspIs(const char *rsp, const size_t *pos);
@@ -287,7 +287,7 @@ static struct {
 	s08 msgReload;
 	s08 allowsSleep;
 	s08 start2dial;
-	s08 modemPrendido;
+	s08 modemPwrStatus;
 	s08 gsmBandOK;
 	s08 memRcds4Tx;			// Registros en la memoria para trasmitir.
 	s08 memRcds4Del;		// Registros en la memoria para borrar ( ya leidos y trasmitidos )
@@ -490,7 +490,7 @@ static void gTR_reloadConfig(void)
 	// seteado la flag de msgReload.
 	// RELOAD_CONFIG -> gSST_OFF_Standby
 
-	pv_GPRSloadParameters();
+	pv_GPRSreloadTimerDial();
 
 	// Apago el modem y dejo
 	// activo el pwr del modem para que no consuma
@@ -509,7 +509,7 @@ static void gTR_reloadConfig(void)
 	GPRS_flags.arranque = FALSE;
 	GPRS_flags.msgReload = FALSE;
 	GPRS_flags.start2dial = FALSE;
-	GPRS_flags.modemPrendido = FALSE;
+	GPRS_flags.modemPwrStatus = APAGADO;
 
 	GPRS_counters.cLote = 4;	// 4 reintentos de enviar el mismo lote de datos
 
@@ -593,7 +593,7 @@ static int gTR_o00(void)
 	// Inicializo el sistema aqui
 	// gST_INIT -> gSST_OFF_Standby
 
-	pv_GPRSloadParameters();
+	pv_GPRSreloadTimerDial();
 
 	// Apago el modem y dejo
 	// activo el pwr del modem para que no consuma
@@ -612,7 +612,7 @@ static int gTR_o00(void)
 	GPRS_flags.arranque = FALSE;
 	GPRS_flags.msgReload = FALSE;
 	GPRS_flags.start2dial = FALSE;
-	GPRS_flags.modemPrendido = FALSE;
+	GPRS_flags.modemPwrStatus = APAGADO;
 
 	GPRS_counters.cLote = 4;	// 4 reintentos de enviar el mismo lote de datos
 
@@ -636,6 +636,11 @@ static int gTR_o02(void)
 {
 
 	// gSST_OFF_Standby -> gSST_OFF_prenderModem_01
+
+	// Al arrancar solo hago 3 reintentos de INIT. Agrego 1 mas para controlar
+	// si estoy en INIT o DATA
+
+	GPRS_counters.cInits = 5;
 
 	GPRS_flags.start2dial = FALSE;
 	GPRS_counters.qTryes = 3;
@@ -726,7 +731,7 @@ static int gTR_o07(void)
 {
 	// gSST_OFF_prenderModem_04 -> EXIT STATE
 
-	GPRS_flags.modemPrendido = TRUE;
+	GPRS_flags.modemPwrStatus = PRENDIDO;
 
 	// CAMBIO DE ESTADO:
 	tkGprs_state = gST_ONoffline;
@@ -2569,78 +2574,64 @@ static void pv_GPRSprintExitMsg(char *code)
 	}
 }
 //------------------------------------------------------------------------------------
-static void pv_GPRSloadParameters(void)
+static void pv_GPRSreloadTimerDial(void)
 {
 
 RtcTimeType_t rtcDateTime;
 u16 now;
+u08 pos;
 
 	// Hora actual en minutos.
 	RTC_read(&rtcDateTime);
-	now = rtcDateTime.hour * 60 + rtcDateTime.min;
+	now = rtcDateTime.hour * 60 + rtcDateTime.min;	// Hora actual en minutos desde las 00:00
 
-	if ( systemVars.pwrMode == PWR_DISCRETO ) {
-		// PWRSAVE ON
-		if ( systemVars.pwrSave == modoPWRSAVE_ON ) {
-			// Caso 2.1: pwrStart < pwrEnd
-			if ( systemVars.pwrSaveStartTime < systemVars.pwrSaveEndTime ) {
-				if ( ( now > systemVars.pwrSaveStartTime) && ( now < systemVars.pwrSaveEndTime) ) {
-					// Estoy dentro del intervalo de pwrSave.
-					GPRS_counters.secs2dial = systemVars.pwrSaveEndTime - now;
-				}
-			}
-
-			// Caso 2.2: pwrStart > pwrEnd ( deberia ser lo mas comun )
-			if ( systemVars.pwrSaveStartTime >= systemVars.pwrSaveEndTime ) {
-				if ( now < systemVars.pwrSaveEndTime) {
-					GPRS_counters.secs2dial = systemVars.pwrSaveEndTime - now;
-				}
-
-				if ( now > systemVars.pwrSaveStartTime ) {
-					GPRS_counters.secs2dial = 1440 - now + systemVars.pwrSaveEndTime;
-				}
-			}
-		} else {
-			// PWRSAVE OFF
+	GPRS_counters.secs2dial = systemVars.timerDial;
+	switch ( systemVars.wrkMode ) {
+	case WK_MONITOR_SQE:
+		// Si recibi un mensaje de monitor poll, habilito a prender el modem inmediatamente
+		// actuando directamente sobre la flag.
+		GPRS_flags.start2dial = TRUE;
+		break;
+	case WK_SERVICE:
+		// En modo service no disco y debo ir al estado STANDBY y quedarme ahi sin prender
+		// el modem por lo que apago el timer
+		while ( xTimerStop( dialTimer, 1 ) != pdPASS )
+			taskYIELD();
+		break;
+	case WK_MONITOR_FRAME:
+		// En modo monitor frame  no disco y debo ir al estado STANDBY: idem
+		while ( xTimerStop( dialTimer, 1 ) != pdPASS )
+			taskYIELD();
+		break;
+	case WK_NORMAL:
+		// En este modo tenemos las opciones de pwrMode.
+		switch ( systemVars.pwrMode ) {
+		case PWR_CONTINUO:
+			// En modo nomal, continuo siempre espero 60s
+			GPRS_counters.secs2dial = 60;
+			break;
+		case PWR_DISCRETO:
+			// En esta opcion es donde interviene el pwrSave
 			GPRS_counters.secs2dial = systemVars.timerDial;
+			break;
 		}
+		break;
 	}
 
-	// En modo continuo siempre espero 60s
-	if ( systemVars.pwrMode == PWR_CONTINUO )
-		GPRS_counters.secs2dial = 60;
-
-	// Excepcion para arrancar rapido al inicio en cualquier modo ( aun pwrSave )
+	// EXCEPCIONES:
+	// EX1- arrancar rapido al inicio en cualquier modo ( aun pwrSave )
 	if ( GPRS_flags.arranque ) {
 		GPRS_counters.secs2dial = 30;
 	}
 
-	// Si reconfigure la banda gsm, reinicio rapido en cualquier modo
+	// EX2- Si reconfigure la banda gsm, reinicio rapido en cualquier modo
 	if ( GPRS_flags.gsmBandOK == FALSE ) {
 		GPRS_counters.secs2dial = 30;
 	}
 
-	// Si recibi un mensaje de monitor poll, habilito a
-	// prender el modem.
-	if ( systemVars.wrkMode == WK_MONITOR_SQE ) {
-		GPRS_flags.start2dial = TRUE;
-	}
+//	snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("DEBUG: GPRS_counters.secs2dial=%d\r\n\0"),GPRS_counters.secs2dial);
+//	FreeRTOS_write( &pdUART1, gprs_printfBuff, sizeof(gprs_printfBuff) );
 
-	// En modo service no disco y debo ir al estado STANDBY
-	if ( systemVars.wrkMode == WK_SERVICE ) {
-		while ( xTimerStop( dialTimer, 1 ) != pdPASS )
-			taskYIELD();
-	}
-
-	// En modo monitor frame  no disco y debo ir al estado STANDBY
-	if ( systemVars.wrkMode == WK_MONITOR_FRAME ) {
-		while ( xTimerStop( dialTimer, 1 ) != pdPASS )
-			taskYIELD();
-	}
-
-	// Al arrancar solo hago 3 reintentos de INIT. Agrego 1 mas para controlar
-	// si estoy en INIT o DATa
-	GPRS_counters.cInits = 5;
 }
 //------------------------------------------------------------------------------------
 static void pv_dialTimerCallback( TimerHandle_t pxTimer )
@@ -3157,13 +3148,16 @@ s32 u_readTimeToNextDial(void)
 	// El -1 indica un modo en que no esta poleando.
 	if ( systemVars.wrkMode == WK_NORMAL )  {
 		return( GPRS_counters.secs2dial);
+	} else if ( systemVars.pwrMode == PWR_CONTINUO ) {
+		return (0);
 	} else {
 		return (-1);
 	}
 }
 //--------------------------------------------------------------------------------------
-s08 u_modemPrendido(void)
+s08 u_modemPwrStatus(void)
 {
-	return(GPRS_flags.modemPrendido);
+
+	return(GPRS_flags.modemPwrStatus);
 }
 //--------------------------------------------------------------------------------------

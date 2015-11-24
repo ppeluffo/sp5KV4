@@ -125,6 +125,7 @@ s08 pvMCP_testAndSet( u08 deviceId, u08 byteAddress, u08 value, u08 bitMask );
 
 s08 MCP_queryDcd( u08 *pin);
 s08 MCP_queryRi( u08 *pin);
+s08 MCP_queryTermsw( u08 *pin);
 s08 MCP_queryDin0( u08 *pin);
 s08 MCP_queryDin1( u08 *pin);
 s08 MCP_query2Din( u08 *din0, u08 *din1 );

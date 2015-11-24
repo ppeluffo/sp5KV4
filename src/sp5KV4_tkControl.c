@@ -16,7 +16,16 @@ void pv_ledsInit(void);
 void pv_flashLeds(void);
 void pv_wdgInit(void);
 void pv_checkWdg(void );
-void pv_dailyReset(void);
+
+TimerHandle_t terminalTimer;
+void  pv_terminalTimerCallBack( TimerHandle_t pxTimer );
+
+TimerHandle_t dailyResetTimer;
+void  pv_dailyResetTimerCallBack( TimerHandle_t pxTimer );
+
+s08 f_terminalPwrStatus;	// Indica si la terminal esta prendida o apagada
+s08 f_prenderTerminal;		// Prendida desde cmd para indicar que quiero dejar la terminal prendida
+s08 f_flashearLeds;
 
 //------------------------------------------------------------------------------------
 void tkControl(void * pvParameters)
@@ -30,7 +39,7 @@ StatBuffer_t pxFFStatBuffer;
 
 	vTaskDelay( ( TickType_t)( 500 / portTICK_RATE_MS ) );
 
-	MCP_init();
+	MCP_init();			// Esto prende la terminal.
 	pv_ledsInit();
 	pv_wdgInit();
 	// inicializo la memoria EE ( fileSysyem)
@@ -53,6 +62,14 @@ StatBuffer_t pxFFStatBuffer;
 	}
 	FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
 
+	// Arranco el timer
+	if ( xTimerStart( terminalTimer, 0 ) != pdPASS )
+		u_panic(P_CTL_TIMERSTART);
+
+	if ( xTimerStart( dailyResetTimer, 0 ) != pdPASS )
+		u_panic(P_CTL_TIMERSTART);
+
+
 	snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("starting tkControl..\r\n\0"));
 	FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
 
@@ -66,22 +83,59 @@ StatBuffer_t pxFFStatBuffer;
 	 // Initialise the xLastWakeTime variable with the current time.
 	 xLastWakeTime = xTaskGetTickCount();
 
+	 f_terminalPwrStatus = ON;
+	 f_prenderTerminal = OFF;
+	 f_flashearLeds = TRUE;
+
 	// Loop
 	for( ;; )
 	{
 
 		u_clearWdg(WDG_CTL);
 
-		// Ejecuto la rutina sincronicamente c/2s
+		// Ejecuto la rutina sincronicamente c/1s
 		// Wait for 1000ms.
 		vTaskDelayUntil( &xLastWakeTime, sleepTime );
 		xLastWakeTime = xTaskGetTickCount();
 
 		pv_flashLeds();
 		pv_checkWdg();
-		pv_dailyReset();
 
 	}
+}
+//------------------------------------------------------------------------------------
+void tkControlInit(void)
+{
+	// Esta funcion se utiliza  antes de arrancar el FRTOS de modo que cree
+	// el timer que necesitamos en este modulo
+	// Creo el timer de la terminal y lo arranco
+	terminalTimer = xTimerCreate (  "TERM_T",
+	                     /* The timer period in ticks, must be greater than 0. */
+	                     ( 30000 / portTICK_PERIOD_MS) ,
+	                     /* The timers will auto-reload themselves when they expire. */
+	                     pdFALSE,
+	                     /* Assign each timer a unique id equal to its array index. */
+	                     ( void * ) NULL,
+	                     /* Each timer calls the same callback when it expires. */
+						 pv_terminalTimerCallBack
+	                   );
+
+	if ( terminalTimer == NULL )
+		u_panic(P_CTL_TIMERCREATE);
+
+	dailyResetTimer = xTimerCreate (  "DRES_T",
+	                     /* The timer period in ticks, must be greater than 0. */
+	                     ( 60000 / portTICK_PERIOD_MS) ,
+	                     /* The timers will auto-reload themselves when they expire. */
+	                     pdFALSE,
+	                     /* Assign each timer a unique id equal to its array index. */
+	                     ( void * ) NULL,
+	                     /* Each timer calls the same callback when it expires. */
+						 pv_dailyResetTimerCallBack
+	                   );
+
+	if ( dailyResetTimer == NULL )
+		u_panic(P_CTL_TIMERCREATE);
 }
 //------------------------------------------------------------------------------------
 void pv_ledsInit(void)
@@ -106,12 +160,16 @@ static u08 l_timer = 1;
 		return;
 
 	l_timer = 1;
-	// Prendo
-	MCP_setLed_LogicBoard(1);		// Led placa logica
-	cbi(LED_KA_PORT, LED_KA_BIT);	// Led placa analogica ( kalive )
-	// ModemLed placa superior.
-	if (u_modemPrendido() )
-		cbi(LED_MODEM_PORT, LED_MODEM_BIT);
+
+
+	// Prendo: solo si hay una terminal conectada
+	if ( f_flashearLeds ) {
+		MCP_setLed_LogicBoard(1);		// Led placa logica
+		cbi(LED_KA_PORT, LED_KA_BIT);	// Led placa analogica ( kalive )
+		// ModemLed placa superior.
+		if (u_modemPwrStatus() == PRENDIDO )
+			cbi(LED_MODEM_PORT, LED_MODEM_BIT);
+	}
 
 	// no es necesario ya que lo que demora las MCP son suficientes.
 	//vTaskDelay( 1 );
@@ -165,18 +223,59 @@ static u08 l_timer = 1;
 	}
 }
 //------------------------------------------------------------------------------------
-void pv_dailyReset(void)
+void  pv_dailyResetTimerCallBack( TimerHandle_t pxTimer )
 {
 	// Una vez por dia el equipo se debe resetear.
-	// Esto me asegura que en caso que pase algo no considerado, debería corregirse.
+	// El timer invoca esta rutina c/1 minuto por lo tanto de contar
+	// hasta 1440.
 
-const u32 RESET_SECS = 86400;	// 24hs*60m*60s Segundos en 24hs.
-static u32 resetCounter = 0;
+static s16 resetCounter = 1440;
 
-	resetCounter += 1;
-	if ( resetCounter > RESET_SECS ) {
+	if ( resetCounter-- <= 0 ) {
 		wdt_enable(WDTO_30MS);
 		while(1) {}
 	}
 }
 //------------------------------------------------------------------------------------
+void  pv_terminalTimerCallBack( TimerHandle_t pxTimer )
+{
+	// Luego de haber arrancado el FREERTOS, a los 2 mins. expira este timer.
+	// y debo ver si apago la terminal o la dejo prendida.
+
+	// Si estoy en modo CONTINUO no apago la terminal ni dejo de flashear los leds
+	if ( systemVars.pwrMode == PWR_CONTINUO) {
+//		snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("DEBUG Terminal CONT..\r\n\0"));
+//		FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
+		return;
+	}
+
+	// Si por cmd indico que quiero la termial prendida, no la apago.
+	if ( f_prenderTerminal == ON ) {
+//		snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("DEBUG Terminal ON..\r\n\0"));
+//		FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
+		return;
+	}
+
+	// Aqui la apago
+	snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("Terminal going off ..\r\n\0"));
+	FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
+	vTaskDelay( ( TickType_t)( 500 / portTICK_RATE_MS ) );
+	// Apago la terminal.
+//	MCP_setTermPwr(0);
+//	f_terminalPwrStatus = OFF;
+	// Tambien apago los leds
+//	f_flashearLeds = FALSE;
+
+}
+//------------------------------------------------------------------------------------
+void u_setTerminal(s08 modo)
+{
+	f_prenderTerminal = modo;
+
+}
+//------------------------------------------------------------------------------------
+s08 u_terminalPwrStatus(void)
+{
+	return(f_terminalPwrStatus);
+}
+//--------------------------------------------------------------------------------------

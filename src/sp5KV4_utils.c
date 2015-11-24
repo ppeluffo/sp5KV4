@@ -256,8 +256,7 @@ int i;
 	systemVars.dbm = 0;
 	systemVars.dcd = 0;
 	systemVars.ri = 0;
-	systemVars.termsw = 0;
-	systemVars.debugLevel = D_BASIC + D_GPRS;
+	systemVars.debugLevel = D_BASIC;
 	systemVars.wrkMode = WK_NORMAL;
 
 	// Cuando arranca si la EE no esta inicializada puede dar cualquier cosa.
@@ -361,30 +360,29 @@ u08 channel;
 		taskYIELD();
 
 	systemVars.initByte = 0x49;
-	strncpy_P(systemVars.dlgId, PSTR("PABLO1\0"),DLGID_LENGTH);
+	strncpy_P(systemVars.dlgId, PSTR("SPY999\0"),DLGID_LENGTH);
 	strncpy_P(systemVars.serverPort, PSTR("80\0"),PORT_LENGTH	);
 	strncpy_P(systemVars.passwd, PSTR("spymovil123\0"),PASSWD_LENGTH);
-	strncpy_P(systemVars.serverScript, PSTR("/cgi-bin/sp5K/sp5KV3.pl\0"),SCRIPT_LENGTH);
+	strncpy_P(systemVars.serverScript, PSTR("/cgi-bin/sp5K/sp5K.pl\0"),SCRIPT_LENGTH);
 
 	systemVars.csq = 0;
 	systemVars.dbm = 0;
 	systemVars.gsmBand = 8;
 	systemVars.dcd = 0;
 	systemVars.ri = 0;
-	systemVars.termsw = 0;
 	systemVars.wrkMode = WK_NORMAL;
 	systemVars.pwrMode = PWR_DISCRETO;
 
 	strncpy_P(systemVars.apn, PSTR("SPYMOVIL.VPNANTEL\0"),APN_LENGTH);
 
 	// DEBUG
-	systemVars.debugLevel = D_BASIC + D_GPRS;
+	systemVars.debugLevel = D_BASIC;
 
 	strncpy_P(systemVars.serverAddress, PSTR("192.168.0.9\0"),IP_LENGTH);
 	systemVars.timerPoll = 300;			// Poleo c/5 minutos
 	systemVars.timerDial = 1800;		// Transmito c/3 hs.
 
-	systemVars.pwrSave = modoPWRSAVE_ON;
+	systemVars.pwrSave = modoPWRSAVE_OFF;
 	systemVars.pwrSaveStartTime =u_convertHHMM2min(2230);	// 22:30 PM
 	systemVars.pwrSaveEndTime =	u_convertHHMM2min(630);	// 6:30 AM
 

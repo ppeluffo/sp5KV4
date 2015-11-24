@@ -176,6 +176,20 @@ u08 regValue;
 	return(retS);
 }
 //------------------------------------------------------------------------------------
+s08 MCP_queryTermsw( u08 *pin)
+{
+// MCP23008 logic
+
+s08 retS;
+u08 regValue;
+
+	//  TERMSW es el bit 7, mask = 0x80
+	retS = MCP_read( MCP0_ADDR, MCP0_GPIO, &regValue);
+	*pin = ( regValue & 0x08) >> 7;
+	//*pin = ( regValue & _BV(7) ) >> 1;		// bit7, mask = 0x80
+	return(retS);
+}
+//------------------------------------------------------------------------------------
 s08 MCP_queryDin0( u08 *pin)
 {
 

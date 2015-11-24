@@ -23,6 +23,7 @@
 static void pv_clearQ(void);
 static void pv_pollQ(void);
 static void pv_pollDcd(void);
+static void pv_pollTermsw(void);
 
 static char dIn_printfBuff[CHAR64];	// Buffer de impresion
 static dinData_t digIn;				// Estructura local donde cuento los pulsos.
@@ -90,6 +91,8 @@ uint32_t ulNotifiedValue;
 			pv_pollDcd();
 			pv_pollQ();
 		}
+
+		pv_pollTermsw();
 	}
 
 }
@@ -121,6 +124,26 @@ u32 tickCount;
 		tickCount = xTaskGetTickCount();
 		if ( pin == 1 ) { snprintf_P( dIn_printfBuff,sizeof(dIn_printfBuff),PSTR(".[%06lu] tkDigitalIn: DCD off(%d)\r\n\0"), tickCount,pin );	}
 		if ( pin == 0 ) { snprintf_P( dIn_printfBuff,sizeof(dIn_printfBuff),PSTR(".[%06lu] tkDigitalIn: DCD on(%d)\r\n\0"), tickCount,pin );	}
+
+		if ( (systemVars.debugLevel & D_DIGITAL) != 0) {
+			FreeRTOS_write( &pdUART1, dIn_printfBuff, sizeof(dIn_printfBuff) );
+		}
+	}
+}
+/*------------------------------------------------------------------------------------*/
+static void pv_pollTermsw(void)
+{
+s08 retS = FALSE;
+u08 pin;
+u32 tickCount;
+
+	retS = MCP_queryTermsw(&pin);
+	// Solo indico los cambios.
+	if ( systemVars.termsw != pin ) {
+		systemVars.termsw = pin;
+		tickCount = xTaskGetTickCount();
+		if ( pin == 1 ) { snprintf_P( dIn_printfBuff,sizeof(dIn_printfBuff),PSTR(".[%06lu] tkDigitalIn: TERM off(%d)\r\n\0"), tickCount,pin );	}
+		if ( pin == 0 ) { snprintf_P( dIn_printfBuff,sizeof(dIn_printfBuff),PSTR(".[%06lu] tkDigitalIn: TERM on(%d)\r\n\0"), tickCount,pin );	}
 
 		if ( (systemVars.debugLevel & D_DIGITAL) != 0) {
 			FreeRTOS_write( &pdUART1, dIn_printfBuff, sizeof(dIn_printfBuff) );

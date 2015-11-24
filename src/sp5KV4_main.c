@@ -75,6 +75,7 @@ unsigned int i,j;
 	// Inicializacion de modulos de las tareas que deben hacerce antes
 	// de arrancar el FRTOS
 	tkOutputInit();
+	tkControlInit();
 	tkAnalogInit();
 	tkGprsInit();
 
@@ -96,7 +97,8 @@ unsigned int i,j;
 /*------------------------------------------------------------------------------------*/
 static void pv_initMPU(void)
 {
-
+	// Configuro el modo de Sleep.
+	set_sleep_mode(SLEEP_MODE_PWR_SAVE);
 }
 /*------------------------------------------------------------------------------------*/
 void vApplicationIdleHook( void )
@@ -105,7 +107,9 @@ void vApplicationIdleHook( void )
 	for(;;) {
 
 //		vCoRoutineSchedule();
-
+		if ( ( systemVars.pwrMode == PWR_DISCRETO ) && ( u_modemPwrStatus() == APAGADO ) && ( u_terminalPwrStatus() == OFF ) ) {
+//			sleep_mode();
+		}
 	}
 
 }
