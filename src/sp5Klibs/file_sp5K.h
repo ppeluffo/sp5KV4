@@ -24,8 +24,8 @@
 #define FF_SIZE_IN_KB	32	// Tamanio en KB de la eeprom externa.
 #define FF_RECD_SIZE	64	// Tamanio del registro
 #define FF_ADDR_START	0	// Posicion inicial
-//#define FF_MAX_RCDS		512	// Cantidad de registros
-#define FF_MAX_RCDS		128
+#define FF_MAX_RCDS		512	// Cantidad de registros
+//#define FF_MAX_RCDS		128
 
 #define FF_WRTAG	0xC5	// 1100 0101
 

@@ -80,6 +80,11 @@ StatBuffer_t pxFFStatBuffer;
 	snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("starting tkControl..\r\n\0"));
 	FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
 
+	// Pongo en modo sleep los DRV de las valvulas ya que en esta version no tengo
+	// tkOutputs.
+	//MCP_outputsReset();
+	MCP_outputsSleep();
+
 	// Habilito arrancar las otras tareas
 	startTask = TRUE;
 
@@ -182,7 +187,7 @@ void pv_wdgInit(void)
 {
 u08 pos;
 
-	systemWdg = WDG_CTL + WDG_CMD + WDG_DIN + WDG_OUT + WDG_AIN + WDG_GPRS;
+	systemWdg = WDG_CTL + WDG_CMD + WDG_DIN + WDG_AIN + WDG_GPRS;
 	pos = snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("Watchdog init (0x%X"),wdgStatus.resetCause);
 	if (wdgStatus.resetCause & 0x01 ) {
 		pos += snprintf_P( &ctl_printfBuff[pos],sizeof(ctl_printfBuff),PSTR(" PORF"));
@@ -216,7 +221,7 @@ static u08 l_timer = 1;
 	l_timer = 1;
 	if ( systemWdg == 0 ) {
 		wdt_reset();
-		systemWdg = WDG_CTL + WDG_CMD + WDG_DIN + WDG_OUT + WDG_AIN + WDG_GPRS;
+		systemWdg = WDG_CTL + WDG_CMD + WDG_DIN + WDG_AIN + WDG_GPRS;
 	}
 }
 //------------------------------------------------------------------------------------

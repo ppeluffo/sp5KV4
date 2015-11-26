@@ -84,7 +84,6 @@ s08 u_configPwrMode(u08 pwrMode)
 	return(TRUE);
 }
 //----------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------
 s08 u_configTimerDial(char *s_tDial)
 {
 u32 tdial;
@@ -157,48 +156,38 @@ u16 HH,MM, hhmm;
 	hhmm = HH * 100 + MM;
 	return(hhmm);
 }
+
 //----------------------------------------------------------------------------------------
-void u_setConsignaDiurna ( u16 ms_pulso )
+void u_vopen ( u08 valveId )
 {
-	// Una consigna es la activacion simultanea de 2 valvulas, en las cuales un
-	// se abre y la otra se cierra.
-	// Cierro la valvula 1
-	// Abro la valvula 2
-	// Para abrir una valvula debemos poner una fase 10.
-	// Para cerrar es 01
+	// Aplica un pulso de apertura de 100ms en una valvula dada
 
-	 MCP_outsPulse( systemVars.consigna.chVA , 0, ms_pulso );	// Cierro la valvula 1
-	 vTaskDelay( ( TickType_t)( 1000 / portTICK_RATE_MS ) );
-	 MCP_outsPulse( systemVars.consigna.chVB , 1, ms_pulso );	// Abro la valvula 2
+	 MCP_outsPulse( valveId , 0, 100 );	// Pulso de apertura
 
 	 // Dejo el sistema de salidas en reposo para que no consuma
-	 MCP_output0Disable();
-	 MCP_output1Disable();
-	 MCP_output2Disable();
-	 MCP_output3Disable();
+	 MCP_outputA1Disable();
+	 MCP_outputA2Disable();
+	 MCP_outputB1Disable();
+	 MCP_outputB2Disable();
 
 	 MCP_outputsSleep();
 }
-/*------------------------------------------------------------------------------------*/
-void u_setConsignaNocturna ( u16 ms_pulso )
+//----------------------------------------------------------------------------------------
+void u_close ( u08 valveId )
 {
-	// Abro la valvula 1
-	// Cierro la valvula 2
+	// Aplica un pulso de cierre de 100ms en una valvula dada
 
-	 MCP_outsPulse( systemVars.consigna.chVA , 1, ms_pulso );	// Abro la valvula 1
-	 vTaskDelay( ( TickType_t)( 1000 / portTICK_RATE_MS ) );
-	 MCP_outsPulse( systemVars.consigna.chVB , 0, ms_pulso );	// Cierro la valvula 2
+	 MCP_outsPulse( valveId , 1, 100 );	// Pulso de cierre
 
 	 // Dejo el sistema de salidas en reposo para que no consuma
-	 MCP_output0Disable();
-	 MCP_output1Disable();
-	 MCP_output2Disable();
-	 MCP_output3Disable();
+	 MCP_outputA1Disable();
+	 MCP_outputA2Disable();
+	 MCP_outputB1Disable();
+	 MCP_outputB2Disable();
 
 	 MCP_outputsSleep();
-
 }
-//------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 void u_clearWdg( u08 wdgId )
 {
 	// Pone el correspondiente bit del wdg en 0.
@@ -256,7 +245,7 @@ int i;
 	systemVars.dbm = 0;
 	systemVars.dcd = 0;
 	systemVars.ri = 0;
-	systemVars.debugLevel = D_BASIC;
+	systemVars.debugLevel = D_BASIC + D_GPRS;
 	systemVars.wrkMode = WK_NORMAL;
 
 	// Cuando arranca si la EE no esta inicializada puede dar cualquier cosa.

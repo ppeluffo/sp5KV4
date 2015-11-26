@@ -54,8 +54,8 @@
 
 // DEFINICION DEL TIPO DE SISTEMA
 //----------------------------------------------------------------------------
-#define SP5K_REV "4.0.0"
-#define SP5K_DATE "@ 20151123a"
+#define SP5K_REV "4.0.1"
+#define SP5K_DATE "@ 20151126b"
 
 #define SP5K_MODELO "sp5KV3 HW:avr1284P R5.0"
 #define SP5K_VERSION "FW:FRTOS8"
@@ -63,15 +63,13 @@
 #define CHAR64		64
 #define CHAR128	 	128
 #define CHAR256	 	256
-#define CHAR384	 	384
 
 //----------------------------------------------------------------------------
 // TASKS
 /* Stack de las tareas */
 #define tkCmd_STACK_SIZE		512
-#define tkControl_STACK_SIZE	256
-#define tkDigitalIn_STACK_SIZE	256
-#define tkOutput_STACK_SIZE		256
+#define tkControl_STACK_SIZE	512
+#define tkDigitalIn_STACK_SIZE	512
 #define tkAIn_STACK_SIZE		512
 #define tkGprs_STACK_SIZE		512
 
@@ -79,7 +77,6 @@
 #define tkCmd_TASK_PRIORITY	 		( tskIDLE_PRIORITY + 1 )
 #define tkControl_TASK_PRIORITY	 	( tskIDLE_PRIORITY + 1 )
 #define tkDigitalIn_TASK_PRIORITY 	( tskIDLE_PRIORITY + 1 )
-#define tkOutput_TASK_PRIORITY 		( tskIDLE_PRIORITY + 1 )
 #define tkAIn_TASK_PRIORITY 		( tskIDLE_PRIORITY + 1 )
 #define tkGprs_TASK_PRIORITY 		( tskIDLE_PRIORITY + 1 )
 
@@ -87,15 +84,13 @@
 void tkCmd(void * pvParameters);
 void tkControl(void * pvParameters);
 void tkDigitalIn(void * pvParameters);
-void tkOutput(void * pvParameters);
-void tkOutputInit(void);
 void tkControlInit(void);
 void tkAnalogIn(void * pvParameters);
 void tkAnalogInit(void);
 void tkGprs(void * pvParameters);
 void tkGprsInit(void);
 
-TaskHandle_t xHandle_tkCmd, xHandle_tkControl, xHandle_tkDigitalIn, xHandle_tkAIn, xHandle_tkGprs,xHandle_tkOutput;
+TaskHandle_t xHandle_tkCmd, xHandle_tkControl, xHandle_tkDigitalIn, xHandle_tkAIn, xHandle_tkGprs;
 
 s08 startTask;
 struct {
@@ -113,6 +108,7 @@ struct {
 #define TKA_READ_FRAME			0x02	// to tkAnalogIN: (mode service) read a frame
 #define TKD_PARAM_RELOAD		0x01	// to tkDigitalIN: reload
 #define TKG_PARAM_RELOAD		0x01	// to tkGprsIN: reload
+
 //------------------------------------------------------------------------------------
 
 xSemaphoreHandle sem_SYSVars;
@@ -121,6 +117,7 @@ xSemaphoreHandle sem_SYSVars;
 typedef enum { WK_IDLE = 0, WK_NORMAL = 1, WK_SERVICE = 2, WK_MONITOR_FRAME = 3, WK_MONITOR_SQE = 4  } t_wrkMode;
 typedef enum { PWR_CONTINUO = 0, PWR_DISCRETO = 1 } t_pwrMode;
 typedef enum { CONSIGNA_OFF = 0, CONSIGNA_ON = 1 } t_consignaMode;
+typedef enum { CONSIGNA_DIURNA = 0, CONSIGNA_NOCTURNA } t_consignaAplicada;
 typedef enum { modoPWRSAVE_OFF = 0, modoPWRSAVE_ON = 1 } t_pwrSave;
 
 #define PRENDIDO	TRUE
@@ -157,6 +154,8 @@ typedef struct {
 	u16 horaConsNoc;
 	u08 chVA;
 	u08 chVB;
+	t_consignaAplicada consignaAplicada;
+
 } consigna_t;		// 6 bytes
 
 typedef struct {
@@ -267,8 +266,10 @@ void u_restartTimerTerminal(void);
 char nowStr[32];
 
 #define CONSIGNA_PULSE_MS		250
-void u_setConsignaDiurna ( u16 ms_pulso );
-void u_setConsignaNocturna ( u16 ms_pulso );
+//void u_setConsignaDiurna ( u16 ms_pulso );
+//void u_setConsignaNocturna ( u16 ms_pulso );
+void u_vopen ( u08 valveId );
+void u_close ( u08 valveId );
 
 void u_readAnalogFrame (frameData_t *dFrame);
 s16 u_readTimeToNextPoll(void);
@@ -294,7 +295,7 @@ u08 systemWdg;
 #define WDG_CTL			0x01
 #define WDG_CMD			0x02
 #define WDG_DIN			0x04
-#define WDG_OUT			0x08
+//#define WDG_OUT			0x08
 #define WDG_AIN			0x10
 #define WDG_GPRS		0x20
 

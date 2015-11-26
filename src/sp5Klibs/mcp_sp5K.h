@@ -138,24 +138,24 @@ s08 MCP_query2Din( u08 *din0, u08 *din1 );
 #define MCP_outputsNoSleep() MCP_setOutsSleepPin(1)
 
 s08 MCP_setOutsEnablePin(  u08 outId, u08 value );
-#define MCP_output0Enable() MCP_setOutsEnablePin(0,1)
-#define MCP_output0Disable() MCP_setOutsEnablePin(0,0)
-#define MCP_output1Enable() MCP_setOutsEnablePin(1,1)
-#define MCP_output1Disable() MCP_setOutsEnablePin(1,0)
-#define MCP_output2Enable() MCP_setOutsEnablePin(2,1)
-#define MCP_output2Disable() MCP_setOutsEnablePin(2,0)
-#define MCP_output3Enable() MCP_setOutsEnablePin(3,1)
-#define MCP_output3Disable() MCP_setOutsEnablePin(3,0)
+#define MCP_outputA1Enable() MCP_setOutsEnablePin(0,1)
+#define MCP_outputA1Disable() MCP_setOutsEnablePin(0,0)
+#define MCP_outputA2Enable() MCP_setOutsEnablePin(2,1)
+#define MCP_outputA2Disable() MCP_setOutsEnablePin(2,0)
+#define MCP_outputB1Enable() MCP_setOutsEnablePin(1,1)
+#define MCP_outputB1Disable() MCP_setOutsEnablePin(1,0)
+#define MCP_outputB2Enable() MCP_setOutsEnablePin(3,1)
+#define MCP_outputB2Disable() MCP_setOutsEnablePin(3,0)
 
 s08 MCP_setOutsPhase(  u08 outId, u08 value );
-#define MCP_output0Phase_01() MCP_setOutsPhase(0,1)
-#define MCP_output0Phase_10() MCP_setOutsPhase(0,0)
-#define MCP_output1Phase_01() MCP_setOutsPhase(1,0)
-#define MCP_output1Phase_10() MCP_setOutsPhase(1,1)
-#define MCP_output2Phase_01() MCP_setOutsPhase(2,1)
-#define MCP_output2Phase_10() MCP_setOutsPhase(2,0)
-#define MCP_output3Phase_01() MCP_setOutsPhase(3,0)
-#define MCP_output3Phase_10() MCP_setOutsPhase(3,1)
+#define MCP_outputA1Phase_01() MCP_setOutsPhase(0,1)
+#define MCP_outputA1Phase_10() MCP_setOutsPhase(0,0)
+#define MCP_outputA2Phase_01() MCP_setOutsPhase(2,0)
+#define MCP_outputA2Phase_10() MCP_setOutsPhase(2,1)
+#define MCP_outputB1Phase_01() MCP_setOutsPhase(1,1)
+#define MCP_outputB1Phase_10() MCP_setOutsPhase(1,0)
+#define MCP_outputB2Phase_01() MCP_setOutsPhase(3,0)
+#define MCP_outputB2Phase_10() MCP_setOutsPhase(3,1)
 
 s08 MCP_outsPulse( u08 channel, u08 phase, u16 delay );
 

@@ -82,8 +82,8 @@ UART_device_control_t *pxNewUart;
 	pxPeripheralControl->xBlockTime = (50 / portTICK_RATE_MS );
 
 	pxNewUart = ( int8_t * ) pvPortMalloc( sizeof(UART_device_control_t ));
-	( flags && UART_RXFIFO) ?  ( pxNewUart->rxBufferType = FIFO ) : (pxNewUart->rxBufferType = QUEUE );
-	( flags && UART_TXFIFO) ?  ( pxNewUart->txBufferType = FIFO ) : (pxNewUart->txBufferType = QUEUE );
+	( flags & UART_RXFIFO) ?  ( pxNewUart->rxBufferType = FIFO ) : (pxNewUart->rxBufferType = QUEUE );
+	( flags & UART_TXFIFO) ?  ( pxNewUart->txBufferType = FIFO ) : (pxNewUart->txBufferType = QUEUE );
 
 	// Creo las estructuras ( queues) de TX/RX
 	// Asigno los tamanios
@@ -293,8 +293,12 @@ UART_device_control_t *pUart;
 				xBytesReceived++;
 			}
 		} else {
+			// Los fifo no tienen timeout, retornan enseguida
 			if( xFifoReceive( pUart->rxStruct, &( pvBuffer[ xBytesReceived ] ), xTicksToWait ) == pdPASS ) {
 				xBytesReceived++;
+			} else {
+				// Espero xTicksToWait antes de volver a chequear
+				vTaskDelay( ( TickType_t)( xTicksToWait ) );
 			}
 		}
 

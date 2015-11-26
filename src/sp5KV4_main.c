@@ -74,7 +74,6 @@ unsigned int i,j;
 
 	// Inicializacion de modulos de las tareas que deben hacerce antes
 	// de arrancar el FRTOS
-	tkOutputInit();
 	tkControlInit();
 	tkAnalogInit();
 	tkGprsInit();
@@ -82,7 +81,6 @@ unsigned int i,j;
 	// Creo las tasks
 	xTaskCreate(tkCmd, "CMD", tkCmd_STACK_SIZE, NULL, tkCmd_TASK_PRIORITY,  &xHandle_tkCmd);
 	xTaskCreate(tkDigitalIn, "DIN", tkDigitalIn_STACK_SIZE, NULL, tkDigitalIn_TASK_PRIORITY,  &xHandle_tkDigitalIn);
-	xTaskCreate(tkOutput, "OUT", tkOutput_STACK_SIZE, NULL, tkOutput_TASK_PRIORITY,  &xHandle_tkOutput);
 	xTaskCreate(tkControl, "CTL", tkControl_STACK_SIZE, NULL, tkControl_TASK_PRIORITY,  &xHandle_tkControl);
 	xTaskCreate(tkAnalogIn, "AIN", tkAIn_STACK_SIZE, NULL, tkAIn_TASK_PRIORITY,  &xHandle_tkAIn);
 	xTaskCreate(tkGprs, "GPRS", tkGprs_STACK_SIZE, NULL, tkGprs_TASK_PRIORITY,  &xHandle_tkGprs);
@@ -107,8 +105,8 @@ void vApplicationIdleHook( void )
 	for(;;) {
 
 //		vCoRoutineSchedule();
-		if ( ( systemVars.pwrMode == PWR_DISCRETO ) && ( u_modemPwrStatus() == APAGADO ) && ( u_terminalPwrStatus() == OFF ) ) {
-//			sleep_mode();
+		if ( ( u_modemPwrStatus() == APAGADO) && (u_terminalPwrStatus() == FALSE ) && ( systemVars.pwrMode == PWR_DISCRETO)) {
+			sleep_mode();
 		}
 	}
 

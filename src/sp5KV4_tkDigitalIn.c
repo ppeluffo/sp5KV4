@@ -68,7 +68,7 @@ uint32_t ulNotifiedValue;
 		u_clearWdg(WDG_DIN);
 
 		// Espero hasta 100ms por un mensaje.
-		xResult = xTaskNotifyWait( 0x00, ULONG_MAX, &ulNotifiedValue, ((TickType_t) 100 / portTICK_RATE_MS ) );
+		xResult = xTaskNotifyWait( 0x00, ULONG_MAX, &ulNotifiedValue, ((TickType_t) 250 / portTICK_RATE_MS ) );
 		// Si llego un mensaje, prendo la flag correspondiente.
 		if ( xResult == pdTRUE ) {
 			if ( ( ulNotifiedValue & TKD_PARAM_RELOAD ) != 0 ) {
@@ -77,7 +77,7 @@ uint32_t ulNotifiedValue;
 			}
 		}
 
-		// Mensaje de cabio de configuracion. Releo la misma
+		// Mensaje de cambio de configuracion. Releo la misma
 		if ( D_flags.msgReload ) {
 			D_flags.msgReload = FALSE;
 			if ( systemVars.wrkMode != WK_NORMAL ) {

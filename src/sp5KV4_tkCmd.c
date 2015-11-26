@@ -65,6 +65,8 @@ u08 c;
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("starting tkCmd..\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 
+	FreeRTOS_ioctl( &pdUART1,ioctlSET_TIMEOUT, 10);
+
 	// loop
 	for( ;; )
 	{
@@ -129,8 +131,8 @@ static void cmdHelpFunction(void)
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  apn, port, ip, script, passwd\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
-	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  consigna {on|off} hhmm1,hhmm2,chVA,chVB \r\n\0"));
-	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
+//	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  consigna {on|off} hhmm1,hhmm2,chVA,chVB \r\n\0"));
+//	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  save\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  (SM) mcp devId regAddr regValue\r\n\0"));
@@ -141,14 +143,16 @@ static void cmdHelpFunction(void)
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  (SM) led {0|1},gprspwr {0|1},gprssw {0|1},termpwr {0|1},sensorpwr {0|1},analogpwr {0|1}\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
-	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  (SM) output {reset|noreset|sleep|nosleep},{enable|disable} {0..3}\r\n\0"));
+	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  (SM) output {reset|noreset,sleep|nosleep},{enable|disable}{A1|A2|B1|B2}\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
-	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  (SM)        phase {0..3} {01|10}\r\n\0"));
+	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  (SM)        phase {A1,A2,B1,B2} {01|10}\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  (SM)        pulse {0..3} {01|10} {ms}\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
-	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("              consigna{diurna|nocturna} ms\r\n\0"));
+	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  (SM)        vopen,vclose {0..3}\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
+//	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  (SM)        consigna{diurna|nocturna} ms\r\n\0"));
+//	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  (SM) atcmd {cmd}\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("-read\r\n\0"));
@@ -429,15 +433,21 @@ StatBuffer_t pxFFStatBuffer;
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 
 	/* Consignas */
-	if ( systemVars.consigna.status == CONSIGNA_ON ) {
+/*	if ( systemVars.consigna.status == CONSIGNA_ON ) {
 		pos = snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  consignas:"));
-		pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("  C.Dia:[%04d]\0"), u_convertMINS2hhmm( systemVars.consigna.horaConsDia ) );
-		pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("  C.Noc:[%04d]\0"), u_convertMINS2hhmm( systemVars.consigna.horaConsNoc ));
-		pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("  [chVA=%d] [chVB=%d]\r\n\0"), systemVars.consigna.chVA,systemVars.consigna.chVB);
+		if ( systemVars.consigna.consignaAplicada == CONSIGNA_DIURNA ) {
+			pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("(diurna) "));
+		} else {
+			pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("(nocturna) "));
+		}
+		pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("C.Dia:[%04d],\0"), u_convertMINS2hhmm( systemVars.consigna.horaConsDia ) );
+		pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("C.Noc:[%04d],\0"), u_convertMINS2hhmm( systemVars.consigna.horaConsNoc ));
+		pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("[chVA=%d],[chVB=%d]\r\n\0"), systemVars.consigna.chVA,systemVars.consigna.chVB);
 	} else {
 		snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  consignas: OFF\r\n\0"));
 	}
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
+*/
 
 	/* VALUES --------------------------------------------------------------------------------------- */
 	memset(&Cframe,'\0', sizeof(frameData_t));
@@ -867,7 +877,7 @@ u08 argc;
 	}
 
 	 // OUTPUTS
-	// {reset|noreset|sleep|nosleep},{enable|disable}{0..3},consigna{diurna|nocturna}ms
+	// {reset|noreset|sleep|nosleep},{enable|disable}{A1,A2,B1,B2}
 	if (!strcmp_P( strupr(argv[1]), PSTR("OUTPUT\0"))) {
 
 		// reset
@@ -900,22 +910,16 @@ u08 argc;
 
 		// enable 0,1,2,3
 		if (!strcmp_P( strupr(argv[2]), PSTR("ENABLE\0")) && ( systemVars.wrkMode == WK_SERVICE) ) {
-			switch(atoi(argv[3])) {
-			case 0:
-				retS = MCP_output0Enable();
-				break;
-			case 1:
-				retS = MCP_output1Enable();
-				break;
-			case 2:
-				retS = MCP_output2Enable();
-				break;
-			case 3:
-				retS = MCP_output3Enable();
-				break;
-			default:
+			if ( !strcmp_P( strupr(argv[3]), PSTR("A1"))) {
+				retS = MCP_outputA1Enable();
+			} else if ( !strcmp_P( strupr(argv[3]), PSTR("A2"))) {
+				retS = MCP_outputA2Enable();
+			} else if ( !strcmp_P( strupr(argv[3]), PSTR("B1"))) {
+				retS = MCP_outputB1Enable();
+			} else if ( !strcmp_P( strupr(argv[3]), PSTR("B2"))) {
+				retS = MCP_outputB2Enable();
+			} else {
 				retS = FALSE;
-				break;
 			}
 			retS ? pv_snprintfP_OK() : 	pv_snprintfP_ERR();
 			return;
@@ -923,49 +927,40 @@ u08 argc;
 
 		// disable 0,1,2,3
 		if (!strcmp_P( strupr(argv[2]), PSTR("DISABLE\0")) && ( systemVars.wrkMode == WK_SERVICE) ) {
-			switch(atoi(argv[3])) {
-			case 0:
-				retS = MCP_output0Disable();
-				break;
-			case 1:
-				retS = MCP_output1Disable();
-				break;
-			case 2:
-				retS = MCP_output2Disable();
-				break;
-			case 3:
-				retS = MCP_output3Disable();
-				break;
-			default:
+			if ( !strcmp_P( strupr(argv[3]), PSTR("A1"))) {
+				retS = MCP_outputA1Disable();
+			} else if ( !strcmp_P( strupr(argv[3]), PSTR("A2"))) {
+				retS = MCP_outputA2Disable();
+			} else if ( !strcmp_P( strupr(argv[3]), PSTR("B1"))) {
+				retS = MCP_outputB1Disable();
+			} else if ( !strcmp_P( strupr(argv[3]), PSTR("B2"))) {
+				retS = MCP_outputB2Disable();
+			} else {
 				retS = FALSE;
-				break;
 			}
 			retS ? pv_snprintfP_OK() : 	pv_snprintfP_ERR();
 			return;
 		}
 
-		// phase {0,1,2,3} 01|10
+		// phase {A1,A2,B1,B2} 01|10
 		if (!strcmp_P( strupr(argv[2]), PSTR("PHASE\0")) && ( systemVars.wrkMode == WK_SERVICE) ) {
-			switch(atoi(argv[3])) {
-			case 0:
-				if (!strcmp_P( strupr(argv[4]), PSTR("01\0"))) { retS = MCP_output0Phase_01(); }
-				if (!strcmp_P( strupr(argv[4]), PSTR("10\0"))) { retS = MCP_output0Phase_10(); }
-				break;
-			case 1:
-				if (!strcmp_P( strupr(argv[4]), PSTR("01\0"))) { retS = MCP_output1Phase_01(); }
-				if (!strcmp_P( strupr(argv[4]), PSTR("10\0"))) { retS = MCP_output1Phase_10(); }
-				break;
-			case 2:
-				if (!strcmp_P( strupr(argv[4]), PSTR("01\0"))) { retS = MCP_output2Phase_01(); }
-				if (!strcmp_P( strupr(argv[4]), PSTR("10\0"))) { retS = MCP_output2Phase_10(); }
-				break;
-			case 3:
-				if (!strcmp_P( strupr(argv[4]), PSTR("01\0"))) { retS = MCP_output3Phase_01(); }
-				if (!strcmp_P( strupr(argv[4]), PSTR("10\0"))) { retS = MCP_output3Phase_10(); }
-				break;
-			default:
+			if ( !strcmp_P( strupr(argv[3]), PSTR("A1"))) {
+				if (!strcmp_P( strupr(argv[4]), PSTR("01\0"))) { retS = MCP_outputA1Phase_01(); }
+				if (!strcmp_P( strupr(argv[4]), PSTR("10\0"))) { retS = MCP_outputA1Phase_10(); }
+
+			} else if ( !strcmp_P( strupr(argv[3]), PSTR("A2"))) {
+				if (!strcmp_P( strupr(argv[4]), PSTR("01\0"))) { retS = MCP_outputA2Phase_01(); }
+				if (!strcmp_P( strupr(argv[4]), PSTR("10\0"))) { retS = MCP_outputA2Phase_10(); }
+
+			} else if ( !strcmp_P( strupr(argv[3]), PSTR("B1"))) {
+				if (!strcmp_P( strupr(argv[4]), PSTR("01\0"))) { retS = MCP_outputB1Phase_01(); }
+				if (!strcmp_P( strupr(argv[4]), PSTR("10\0"))) { retS = MCP_outputB1Phase_10(); }
+
+			} else if ( !strcmp_P( strupr(argv[3]), PSTR("B2"))) {
+				if (!strcmp_P( strupr(argv[4]), PSTR("01\0"))) { retS = MCP_outputB2Phase_01(); }
+				if (!strcmp_P( strupr(argv[4]), PSTR("10\0"))) { retS = MCP_outputB2Phase_10(); }
+			} else {
 				retS = FALSE;
-				break;
 			}
 			retS ? pv_snprintfP_OK() : 	pv_snprintfP_ERR();
 			return;
@@ -979,8 +974,23 @@ u08 argc;
 			return;
 		}
 
+		// vopen 0,1,2,3
+		if (!strcmp_P( strupr(argv[2]), PSTR("VOPEN\0")) && ( systemVars.wrkMode == WK_SERVICE) ) {
+			u_vopen((u08) (atoi(argv[3])));
+			pv_snprintfP_OK();
+			return;
+		}
+
+		// vclose 0,1,2,3
+		if (!strcmp_P( strupr(argv[2]), PSTR("VCLOSE\0")) && ( systemVars.wrkMode == WK_SERVICE) ) {
+			u_close((u08) (atoi(argv[3])));
+			pv_snprintfP_OK();
+			return;
+		}
+
+
 		// consigna { diurna | nocturna }
-		if (!strcmp_P( strupr(argv[2]), PSTR("CONSIGNA\0"))) {
+/*		if (!strcmp_P( strupr(argv[2]), PSTR("CONSIGNA\0")) && ( systemVars.wrkMode == WK_SERVICE) ) {
 			if (!strcmp_P( strupr(argv[3]), PSTR("DIURNA\0"))) {
 				u_setConsignaDiurna(atoi(argv[4]));
 				snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("Consigna DIURNA..\r\n\0"));
@@ -993,7 +1003,7 @@ u08 argc;
 			pv_snprintfP_OK();
 			return;
 		}
-
+*/
 	}
 
 	// ATCMD

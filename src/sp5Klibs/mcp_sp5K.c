@@ -10,6 +10,7 @@
 
 #include <mcp_sp5K.h>
 #include "FRTOS-IO.h"
+#include "../sp5KV4.h"
 
 // Funciones privadas del modulo MCP
 static void pvMCP_init_MCP0(void);
@@ -91,6 +92,9 @@ u08 xBytes = 0;
 u08 regValue;
 s08 retS = FALSE;
 
+//	snprintf_P( debug_printfBuff,sizeof(debug_printfBuff),PSTR("MCPT&S [dev=%d][addr=%d][val=%d][msk=%d].\r\n\0"),deviceId, byteAddr, value,bitMask );
+//	FreeRTOS_write( &pdUART1, debug_printfBuff, sizeof(debug_printfBuff) );
+
 	// Lo primero es obtener el semaforo
 	FreeRTOS_ioctl(&pdI2C,ioctlOBTAIN_BUS_SEMPH, NULL);
 	// Luego indicamos el periferico i2c en el cual queremos leer
@@ -110,6 +114,9 @@ s08 retS = FALSE;
 		goto quit;
 	}
 
+//	snprintf_P( debug_printfBuff,sizeof(debug_printfBuff),PSTR("MCPT&S [rdVal=%d]\r\n\0"),regValue );
+//	FreeRTOS_write( &pdUART1, debug_printfBuff, sizeof(debug_printfBuff) );
+
 	// Modifico el registro
 	if  (value == 0) {
 		regValue &= ~BV(bitMask);
@@ -123,6 +130,9 @@ s08 retS = FALSE;
 	if (xReturn != xBytes ) {
 		goto quit;
 	}
+
+//	snprintf_P( debug_printfBuff,sizeof(debug_printfBuff),PSTR("MCPT&S [wrVal=%d]\r\n\0"),regValue );
+//	FreeRTOS_write( &pdUART1, debug_printfBuff, sizeof(debug_printfBuff) );
 
 	retS = TRUE;
 
@@ -277,33 +287,33 @@ s08 retS = FALSE;
 	MCP_outputsNoSleep();
 	MCP_outputsNoReset();
 	switch(channel) {
-	case 0:
-		if ( phase == 0 ) { retS = MCP_output0Phase_01(); }
-		if ( phase == 1 ) { retS = MCP_output0Phase_10(); }
-		MCP_output0Enable();
+	case 0:	// Canal 0, A1
+		if ( phase == 0 ) { retS = MCP_outputA1Phase_01(); }
+		if ( phase == 1 ) { retS = MCP_outputA1Phase_10(); }
+		MCP_outputA1Enable();
 		vTaskDelay( ( TickType_t)( delay / portTICK_RATE_MS ) );
-		MCP_output0Disable();
+		MCP_outputA1Disable();
 		break;
-	case 1:
-		if ( phase == 0 ) { retS = MCP_output1Phase_01(); }
-		if ( phase == 1 ) { retS = MCP_output1Phase_10(); }
-		MCP_output1Enable();
+	case 1: // Canal 1, B1
+		if ( phase == 0 ) { retS = MCP_outputB1Phase_10(); }
+		if ( phase == 1 ) { retS = MCP_outputB1Phase_01(); }
+		MCP_outputB1Enable();
 		vTaskDelay( ( TickType_t)( delay / portTICK_RATE_MS ) );
-		MCP_output1Disable();
+		MCP_outputB1Disable();
 		break;
-	case 2:
-		if ( phase == 0 ) { retS = MCP_output2Phase_01(); }
-		if ( phase == 1 ) { retS = MCP_output2Phase_10(); }
-		MCP_output2Enable();
+	case 2: // Canal 2, A2
+		if ( phase == 0 ) { retS = MCP_outputA2Phase_10(); }
+		if ( phase == 1 ) { retS = MCP_outputA2Phase_01(); }
+		MCP_outputA2Enable();
 		vTaskDelay( ( TickType_t)( delay / portTICK_RATE_MS ) );
-		MCP_output2Disable();
+		MCP_outputA2Disable();
 		break;
-	case 3:
-		if ( phase == 0 ) { retS = MCP_output3Phase_01(); }
-		if ( phase == 1 ) { retS = MCP_output3Phase_10(); }
-		MCP_output3Enable();
+	case 3: // Canal 3, B2
+		if ( phase == 0 ) { retS = MCP_outputB2Phase_01(); }
+		if ( phase == 1 ) { retS = MCP_outputB2Phase_10(); }
+		MCP_outputB2Enable();
 		vTaskDelay( ( TickType_t)( delay / portTICK_RATE_MS ) );
-		MCP_output3Disable();
+		MCP_outputB2Disable();
 		break;
 	default:
 		retS = FALSE;
@@ -445,15 +455,16 @@ u08 xBytes = 0;
 	// PULL-UPS
 	// 0->disabled
 	// 1->enabled
+	// Los dejo en 0 para ahorrar ma.
 	val = MCP1_GPPUA;
 	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
-	data = 0xFF; // 1111 1111
+	data = 0x00; // 1111 1111
 	xBytes = sizeof(data);
 	xReturn = FreeRTOS_write(&pdI2C, &data, xBytes);
 
 	val = MCP1_GPPUB;
 	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
-	data = 0xFF; // 1111 1111
+	data = 0x00; // 1111 1111
 	xBytes = sizeof(data);
 	xReturn = FreeRTOS_write(&pdI2C, &data, xBytes);
 	//
