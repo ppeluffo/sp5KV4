@@ -6,18 +6,6 @@
  * git remote add REM_SP5KV4 https://github.com/ppeluffo/sp5KV4.git
  * git push -u REM_SP5KV4 master
  *
- * A RESOLVER:
- * 1- La primera vez que se conecta, el router indica 'destination unreachable'.
- * Para acortar los tiempos, tal vez el modem debiera en vez de espera, reintentar el comando.
- *
- * 2- Watchgog
- * Guardo el estado por el que me reseteo y lo mando en el frame de INIT.
- *
- * 3- Tiempos:
- * La causa del delay en las operaciones de memoria viene por un lado por la espera de los
- * semaforos que incorporaba 10 ticks, y por otro lado en la espera de las respuestas del I2C que
- * incorporaba otros 10 ticks a c/u.
- * Lo soluciono bajando todo a 1 tick.
  *
  *
  * ----------------------------------------------------------------------------------------------------------------
@@ -37,8 +25,7 @@ unsigned int i,j;
 	// Rutina NECESARIA para que al retornar de un reset por WDG no quede en infinitos resets.
 	// Copiado de la hoja de datos.
 
-	// Lo primero que hago es leer la causa del reset.
-
+	// Lo primero que hago es leer la causa del reset para luego trasmitirla en un init.
 	wdgStatus.resetCause = MCUSR;
 
 	cli();
@@ -84,6 +71,7 @@ unsigned int i,j;
 	xTaskCreate(tkControl, "CTL", tkControl_STACK_SIZE, NULL, tkControl_TASK_PRIORITY,  &xHandle_tkControl);
 	xTaskCreate(tkAnalogIn, "AIN", tkAIn_STACK_SIZE, NULL, tkAIn_TASK_PRIORITY,  &xHandle_tkAIn);
 	xTaskCreate(tkGprs, "GPRS", tkGprs_STACK_SIZE, NULL, tkGprs_TASK_PRIORITY,  &xHandle_tkGprs);
+	xTaskCreate(tkConsignas, "CONS", tkCons_STACK_SIZE, NULL, tkCons_TASK_PRIORITY,  &xHandle_tkConsignas);
 
 	/* Arranco el RTOS. */
 	vTaskStartScheduler();

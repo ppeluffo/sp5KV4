@@ -55,7 +55,7 @@
 // DEFINICION DEL TIPO DE SISTEMA
 //----------------------------------------------------------------------------
 #define SP5K_REV "4.0.1"
-#define SP5K_DATE "@ 20151126b"
+#define SP5K_DATE "@ 20151127a"
 
 #define SP5K_MODELO "sp5KV3 HW:avr1284P R5.0"
 #define SP5K_VERSION "FW:FRTOS8"
@@ -72,6 +72,7 @@
 #define tkDigitalIn_STACK_SIZE	512
 #define tkAIn_STACK_SIZE		512
 #define tkGprs_STACK_SIZE		512
+#define tkCons_STACK_SIZE		512
 
 /* Prioridades de las tareas */
 #define tkCmd_TASK_PRIORITY	 		( tskIDLE_PRIORITY + 1 )
@@ -79,6 +80,7 @@
 #define tkDigitalIn_TASK_PRIORITY 	( tskIDLE_PRIORITY + 1 )
 #define tkAIn_TASK_PRIORITY 		( tskIDLE_PRIORITY + 1 )
 #define tkGprs_TASK_PRIORITY 		( tskIDLE_PRIORITY + 1 )
+#define tkCons_TASK_PRIORITY 		( tskIDLE_PRIORITY + 1 )
 
 /* Prototipos de tareas */
 void tkCmd(void * pvParameters);
@@ -89,8 +91,9 @@ void tkAnalogIn(void * pvParameters);
 void tkAnalogInit(void);
 void tkGprs(void * pvParameters);
 void tkGprsInit(void);
+void tkConsignas(void * pvParameters);
 
-TaskHandle_t xHandle_tkCmd, xHandle_tkControl, xHandle_tkDigitalIn, xHandle_tkAIn, xHandle_tkGprs;
+TaskHandle_t xHandle_tkCmd, xHandle_tkControl, xHandle_tkDigitalIn, xHandle_tkAIn, xHandle_tkGprs, xHandle_tkConsignas;
 
 s08 startTask;
 struct {
@@ -108,6 +111,7 @@ struct {
 #define TKA_READ_FRAME			0x02	// to tkAnalogIN: (mode service) read a frame
 #define TKD_PARAM_RELOAD		0x01	// to tkDigitalIN: reload
 #define TKG_PARAM_RELOAD		0x01	// to tkGprsIN: reload
+#define TKC_PARAM_RELOAD		0x01	// to tkConsIN: reload
 
 //------------------------------------------------------------------------------------
 
@@ -295,7 +299,7 @@ u08 systemWdg;
 #define WDG_CTL			0x01
 #define WDG_CMD			0x02
 #define WDG_DIN			0x04
-//#define WDG_OUT			0x08
+#define WDG_CSG			0x08
 #define WDG_AIN			0x10
 #define WDG_GPRS		0x20
 

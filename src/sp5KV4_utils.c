@@ -245,7 +245,7 @@ int i;
 	systemVars.dbm = 0;
 	systemVars.dcd = 0;
 	systemVars.ri = 0;
-	systemVars.debugLevel = D_BASIC + D_GPRS;
+	systemVars.debugLevel = D_BASIC;
 	systemVars.wrkMode = WK_NORMAL;
 
 	// Cuando arranca si la EE no esta inicializada puede dar cualquier cosa.
@@ -349,7 +349,7 @@ u08 channel;
 		taskYIELD();
 
 	systemVars.initByte = 0x49;
-	strncpy_P(systemVars.dlgId, PSTR("SPY999\0"),DLGID_LENGTH);
+	strncpy_P(systemVars.dlgId, PSTR("DEF401\0"),DLGID_LENGTH);
 	strncpy_P(systemVars.serverPort, PSTR("80\0"),PORT_LENGTH	);
 	strncpy_P(systemVars.passwd, PSTR("spymovil123\0"),PASSWD_LENGTH);
 	strncpy_P(systemVars.serverScript, PSTR("/cgi-bin/sp5K/sp5K.pl\0"),SCRIPT_LENGTH);

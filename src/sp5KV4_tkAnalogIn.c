@@ -333,8 +333,6 @@ static int trD04(void)
 {
 	// tkdST_PWRSETTLE->tkdST_POLLING
 
-u16 adcRetValue;
-
 	AN_counters.nroPoleos = CICLOS_POLEO;
 
 	// Init Data Structure
@@ -516,6 +514,8 @@ StatBuffer_t pxFFStatBuffer;
 	} else if ( systemVars.wrkMode == WK_MONITOR_FRAME ) {
 		pos = snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR("\r\n\0"));
 		FreeRTOS_write( &pdUART1, "MON->\0", sizeof("MON->\0") );
+	} else {
+		pos = snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR("\r\n\0"));
 	}
 	FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
 
