@@ -108,10 +108,10 @@ fifoHandle_t xFifoCreate ( const u16 length,int flags  )
 fifo_handle_s *pxNewFifo;
 fifoHandle_t xReturn = NULL;
 int8_t *pcAllocatedBuffer;
-int8_t *dataBuffer;
+u08 *dataBuffer;
 
 	// Aloco el espacio para el buffer de datos.
-	dataBuffer = ( int8_t * ) pvPortMalloc( length + 1);
+	dataBuffer = ( u08 * ) pvPortMalloc( length + 1);
 
 	// Aloco espacio para la estructura.
 	pcAllocatedBuffer = ( int8_t * ) pvPortMalloc( sizeof(fifo_handle_s ));
@@ -131,7 +131,7 @@ int8_t *dataBuffer;
 
 }
 /*------------------------------------------------------------------------------------*/
-BaseType_t xFifoReset( fifoHandle_t xFifo )
+int xFifoReset( fifoHandle_t xFifo )
 {
 fifo_handle_s *pxFifo;
 
@@ -142,6 +142,7 @@ fifo_handle_s *pxFifo;
 	pxFifo->uxMessageWaiting = 0;
 	memset(pxFifo->buff,0, pxFifo->length );	// REVISAR
 	taskEXIT_CRITICAL();
+	return(0);
 }
 /*------------------------------------------------------------------------------------*/
 BaseType_t xFifoSend( fifoHandle_t xFifo,const char *cChar, TickType_t xTicksToWait )
@@ -255,7 +256,7 @@ ISR( USART0_UDRE_vect )
 */
 
 s08 cTaskWoken;
-u08 cChar;
+char cChar;
 s08 res = pdFALSE;
 UART_device_control_t *pUart;
 
@@ -264,7 +265,7 @@ UART_device_control_t *pUart;
 	if ( pUart->txBufferType == QUEUE ) {
 		res = xQueueReceiveFromISR( pUart->txStruct, &cChar, &cTaskWoken );
 	} else {
-		res = xFifoReceiveFromISR( pUart->txStruct, &cChar, NULL );
+		res = xFifoReceiveFromISR( pUart->txStruct, &cChar, 0 );
 	}
 
 	if( res == pdTRUE ) {
@@ -280,7 +281,7 @@ ISR( USART1_UDRE_vect )
 {
 	// Handler (ISR) de TX.
 s08 cTaskWoken;
-u08 cChar;
+char cChar;
 s08 res  = pdFALSE;
 UART_device_control_t *pUart;
 
@@ -289,7 +290,7 @@ UART_device_control_t *pUart;
 	if ( pUart->txBufferType == QUEUE ) {
 		res = xQueueReceiveFromISR( pUart->txStruct, &cChar, &cTaskWoken );
 	} else {
-		res = xFifoReceiveFromISR( pUart->txStruct, &cChar, NULL );
+		res = xFifoReceiveFromISR( pUart->txStruct, &cChar, 0 );
 	}
 
 	if( res == pdTRUE ) {
@@ -309,7 +310,7 @@ ISR( USART0_RX_vect )
  * guardando en la cola de recepcion
 */
 
-s08 cChar;
+char cChar;
 UART_device_control_t *pUart;
 
 	pUart = pdUART0.phDevice;
@@ -321,11 +322,11 @@ UART_device_control_t *pUart;
 	cChar = inb(UDR0);
 
 	if ( pUart->rxBufferType == QUEUE ) {
-		if( xQueueSendFromISR( pUart->rxStruct, &cChar, pdFALSE ) ) {
+		if( xQueueSendFromISR( pUart->rxStruct, &cChar, 0 ) ) {
 			taskYIELD();
 		}
 	} else {
-		if( xFifoSendFromISR( pUart->rxStruct, &cChar, pdFALSE ) ) {
+		if( xFifoSendFromISR( pUart->rxStruct, &cChar, 0 ) ) {
 			taskYIELD();
 		}
 	}

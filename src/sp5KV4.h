@@ -54,8 +54,8 @@
 
 // DEFINICION DEL TIPO DE SISTEMA
 //----------------------------------------------------------------------------
-#define SP5K_REV "4.0.1"
-#define SP5K_DATE "@ 20151127a"
+#define SP5K_REV "4.0.3"
+#define SP5K_DATE "@ 20151201"
 
 #define SP5K_MODELO "sp5KV3 HW:avr1284P R5.0"
 #define SP5K_VERSION "FW:FRTOS8"
@@ -256,7 +256,7 @@ s08 u_configPwrMode(u08 pwrMode);
 s08 u_configTimerPoll(char *s_tPoll);
 s08 u_configTimerDial(char *s_tDial);
 void u_configPwrSave(u08 modoPwrSave, char *s_startTime, char *s_endTime);
-void u_configConsignas( u08 modo, char *s_horaConsDia,char *s_horaConsNoc,u08 chVA, u08 chVB );
+void u_configConsignas( u08 modo, char *s_horaConsDia,char *s_horaConsNoc,char *chVA, char *chVB );
 u16 u_convertHHMM2min(u16 HHMM );
 u16 u_convertMINS2hhmm ( u16 mins );
 void u_clearWdg( u08 wdgId );
@@ -270,8 +270,8 @@ void u_restartTimerTerminal(void);
 char nowStr[32];
 
 #define CONSIGNA_PULSE_MS		250
-//void u_setConsignaDiurna ( u16 ms_pulso );
-//void u_setConsignaNocturna ( u16 ms_pulso );
+void u_setConsignaDiurna ( void );
+void u_setConsignaNocturna ( void );
 void u_vopen ( u08 valveId );
 void u_close ( u08 valveId );
 

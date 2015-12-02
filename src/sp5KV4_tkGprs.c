@@ -22,8 +22,8 @@ TimerHandle_t dialTimer;
 static void pv_GPRSprintExitMsg(char *code);
 static void pv_GPRSreloadTimerDial(void);
 static void pv_dialTimerCallback( TimerHandle_t pxTimer );
-char *cb_strstr(Peripheral_Control_t *UART, const char substring[], int *pos);
-static s08 pv_GPRSrspIs(const char *rsp, const size_t *pos);
+char *cb_strstr(Peripheral_Control_t *UART, char substring[], size_t *pos);
+static s08 pv_GPRSrspIs(char *rsp, size_t *pos);
 static void pv_GPRSprintRsp(void);
 // Funciones de reconfiguracion
 static void pv_GPRSprocessServerClock(void);
@@ -648,7 +648,7 @@ u16 now;
 	RTC_read(&rtcDateTime);
 	now = rtcDateTime.hour * 60 + rtcDateTime.min;	// Hora actual en minutos desde las 00:00
 	GPRS_flags.pwrSave = FALSE;
-	if ( ( systemVars.wrkMode == WK_NORMAL ) && ( systemVars.pwrMode == PWR_DISCRETO ) && ( systemVars.pwrMode ==  modoPWRSAVE_ON ) ) {
+	if ( ( systemVars.wrkMode == WK_NORMAL ) && ( systemVars.pwrMode == PWR_DISCRETO ) && ( systemVars.pwrSave ==  modoPWRSAVE_ON ) ) {
 		// Caso 1:
 		if ( systemVars.pwrSaveStartTime < systemVars.pwrSaveEndTime ) {
 			if ( ( now > systemVars.pwrSaveStartTime) && ( now < systemVars.pwrSaveEndTime) ) {
@@ -679,6 +679,8 @@ static int gTR_o02(void)
 
 	GPRS_counters.cInits = 5;
 	GPRS_counters.qTryes = 3;
+
+	GPRS_flags.modemPwrStatus = PRENDIDO;
 
 	pv_GPRSprintExitMsg("o02\0");
 	return(gSST_OFF_prenderModem_01);
@@ -765,8 +767,6 @@ static int gTR_o06(void)
 static int gTR_o07(void)
 {
 	// gSST_OFF_prenderModem_04 -> EXIT STATE
-
-	GPRS_flags.modemPwrStatus = PRENDIDO;
 
 	// CAMBIO DE ESTADO:
 	tkGprs_state = gST_ONoffline;
@@ -1984,7 +1984,7 @@ u08 saveFlag = 0;
 	saveFlag += pv_GPRSprocessDch(0);
 	saveFlag += pv_GPRSprocessDch(1);
 	// Consignas
-//	saveFlag += pv_GPRSprocessConsignas();
+	saveFlag += pv_GPRSprocessConsignas();
 
 	if ( saveFlag > 0 ) {
 		if ( u_saveSystemParams() ) {
@@ -2468,7 +2468,7 @@ static int gTR_d16(void)
 	// gSST_ONdata_c1 -> gSST_ONdata_c2
 	// Chequeo si llego una respuesta. Una vez por segundo
 
-u08 pos = 0;
+size_t pos = 0;
 
 	pv_GPRSprintRsp();
 
@@ -2610,7 +2610,6 @@ static void pv_GPRSreloadTimerDial(void)
 
 RtcTimeType_t rtcDateTime;
 u16 now;
-u08 pos;
 
 	// Hora actual en minutos.
 	RTC_read(&rtcDateTime);
@@ -2709,7 +2708,7 @@ static void pv_dialTimerCallback( TimerHandle_t pxTimer )
 	}
 }
 //------------------------------------------------------------------------------------
-static s08 pv_GPRSrspIs(const char *rsp, const size_t *pos)
+static s08 pv_GPRSrspIs(char *rsp, size_t *pos)
 {
 s08 retS = FALSE;
 char *p = NULL;
@@ -2722,7 +2721,7 @@ char *p = NULL;
 	return(retS);
 }
 //------------------------------------------------------------------------------------
-char *cb_strstr(Peripheral_Control_t *UART, const char *s, int *pos )
+char *cb_strstr(Peripheral_Control_t *UART, char *s, size_t *pos )
 {
 int i;
 char *p,*q, *res = NULL;
@@ -2738,7 +2737,7 @@ fifo_handle_s *uartFifo;
 	uartDevice = (UART_device_control_t *) UART->phDevice;
 	uartFifo = (fifo_handle_s *) uartDevice->rxStruct;
 
-	p = uartFifo->buff;
+	p = (char *)(uartFifo->buff);
 	stringSize = uartFifo->length;
 	q = s;
 
@@ -2777,7 +2776,7 @@ fifo_handle_s *uartFifo;
 		if ( i == stringSize ) {
 			// Llegue al final. Rollover.
 			i = 0;
-			p = uartFifo->buff;
+			p = (char *)(uartFifo->buff);
 			rollover = TRUE;
 		}
     }
@@ -3046,7 +3045,7 @@ char *p, *s;
 	p3 = strsep(&stringp,delim); 	// chVA
 	p4 = strsep(&stringp,delim); 	// chVB
 
-	u_configConsignas(modo, p1, p2, atoi(p3), atoi(p4));
+	u_configConsignas(modo, p1, p2,p3, p4);
 	snprintf_P( gprs_printfBuff,CHAR256,PSTR(".[%06lu] tkGprs:: Reconfig CONS.\r\n\0"),tickCount );
 	ret = 1;
 

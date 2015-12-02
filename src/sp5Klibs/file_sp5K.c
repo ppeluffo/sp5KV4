@@ -12,7 +12,7 @@
 
 //#define DEBUG_FF
 
-static u08 pv_memChecksum( char *buff, u08 limit );
+static u08 pv_memChecksum( u08 *buff, u08 limit );
 //static u32 a,b,c,d,e,f;
 
 //------------------------------------------------------------------------------------
@@ -514,7 +514,7 @@ int FF_errno( void )
 	return( FCB.ff_stat.errno);
 }
 //------------------------------------------------------------------------------------
-static u08 pv_memChecksum( char *buff, u08 limit )
+static u08 pv_memChecksum( u08 *buff, u08 limit )
 {
 u08 checksum = 0;
 u08 i;

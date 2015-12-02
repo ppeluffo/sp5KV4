@@ -115,7 +115,7 @@ void u_configPwrSave(u08 modoPwrSave, char *s_startTime, char *s_endTime)
 
 }
 //----------------------------------------------------------------------------------------
-void u_configConsignas( u08 modo, char *s_horaConsDia,char *s_horaConsNoc,u08 chVA, u08 chVB )
+void u_configConsignas( u08 modo, char *s_horaConsDia,char *s_horaConsNoc,char *chVA,char *chVB )
 {
 	while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 1 ) != pdTRUE )
 		taskYIELD();
@@ -128,12 +128,17 @@ void u_configConsignas( u08 modo, char *s_horaConsDia,char *s_horaConsNoc,u08 ch
 		systemVars.consigna.status = CONSIGNA_ON;
 		if ( s_horaConsDia != NULL ) { systemVars.consigna.horaConsDia =  u_convertHHMM2min ( atol(s_horaConsDia) ); }
 		if ( s_horaConsNoc != NULL ) { systemVars.consigna.horaConsNoc =  u_convertHHMM2min ( atol(s_horaConsNoc) ); }
-		if ( chVA != NULL ) { systemVars.consigna.chVA = chVA; }
-		if ( chVB != NULL ) { systemVars.consigna.chVB = chVB; }
+		if ( chVA != NULL ) { systemVars.consigna.chVA = atoi(chVA); }
+		if ( chVB != NULL ) { systemVars.consigna.chVB = atoi(chVB); }
 		break;
 	}
 
 	xSemaphoreGive( sem_SYSVars );
+
+	// Le aviso a la tarea de las consignas
+	while ( xTaskNotify(xHandle_tkConsignas, TKC_PARAM_RELOAD , eSetBits ) != pdPASS ) {
+		vTaskDelay( ( TickType_t)( 100 / portTICK_RATE_MS ) );
+	}
 
 }
 /*------------------------------------------------------------------------------------*/
@@ -156,7 +161,6 @@ u16 HH,MM, hhmm;
 	hhmm = HH * 100 + MM;
 	return(hhmm);
 }
-
 //----------------------------------------------------------------------------------------
 void u_vopen ( u08 valveId )
 {
@@ -200,7 +204,7 @@ s08 u_saveSystemParams(void)
 	// Salva el systemVars en la EE y verifica que halla quedado bien.
 	// Hago hasta 3 intentos.
 
-int EEaddr = 0; // posicion inicial
+u08 EEaddr = 0; // posicion inicial
 s08 retS = FALSE;
 u08 storeChecksum = 0;
 u08 loadChecksum = 0;
@@ -210,10 +214,10 @@ u08 i;
 		taskYIELD();
 
 	for ( i=0; i<3; i++ ) {
-		storeChecksum = pv_paramStore( &systemVars, EEaddr, sizeof(systemVarsType));
+		storeChecksum = pv_paramStore( (u08 *)(&systemVars), &EEaddr, sizeof(systemVarsType));
 		vTaskDelay( ( TickType_t)( 100 / portTICK_RATE_MS ) );
-		pv_paramLoad( &tmpSV, EEaddr, sizeof(systemVarsType));
-		loadChecksum = pv_checkSum(&tmpSV,sizeof(systemVarsType));
+		pv_paramLoad( (u08 *)(&tmpSV), &EEaddr, sizeof(systemVarsType));
+		loadChecksum = pv_checkSum( (u08 *)(&tmpSV) ,sizeof(systemVarsType));
 
 		if ( loadChecksum == storeChecksum ) {
 			retS = TRUE;
@@ -229,12 +233,12 @@ u08 i;
 s08 u_loadSystemParams(void)
 {
 s08 retS = FALSE;
-int EEaddr = 0; // posicion inicial
+u08 EEaddr = 0; // posicion inicial
 int i;
 	// Leo la configuracion:  Intento leer hasta 3 veces.
 
 	for ( i=0; i<3;i++) {
-		retS = pv_paramLoad( &systemVars, EEaddr, sizeof(systemVarsType));
+		retS = pv_paramLoad( (u08 *)(&systemVars), &EEaddr, sizeof(systemVarsType));
 		if ( retS )
 			break;
 	}
@@ -307,7 +311,7 @@ u16 tpoll;
 
 	return(TRUE);
 }
-u08 pv_paramStore(u08* data, u08* addr, u16 sizebytes)
+u08 pv_paramStore(u08 *data, u08* addr, u16 sizebytes)
 {
 	// Almacena un string de bytes en la eeprom interna del micro
 
@@ -460,4 +464,48 @@ u08 u_readTermsw(u08 *pin)
 
 }
 //------------------------------------------------------------------------------------
+void u_setConsignaDiurna ( void )
+{
+	// Una consigna es la activacion simultanea de 2 valvulas, en las cuales un
+	// se abre y la otra se cierra.
+	// Cierro la valvula 1
+	// Abro la valvula 2
+	// Para abrir una valvula debemos poner una fase 10.
+	// Para cerrar es 01
 
+	 MCP_outsPulse( systemVars.consigna.chVA , 1, 100 );	// Cierro la valvula 1
+	 vTaskDelay( ( TickType_t)( 1000 / portTICK_RATE_MS ) );
+	 MCP_outsPulse( systemVars.consigna.chVB , 0, 100 );	// Abro la valvula 2
+
+	 systemVars.consigna.consignaAplicada = CONSIGNA_DIURNA;
+
+	 // Dejo el sistema de salidas en reposo para que no consuma
+	 MCP_outputA1Disable();
+	 MCP_outputA2Disable();
+	 MCP_outputB1Disable();
+	 MCP_outputB2Disable();
+
+	 MCP_outputsSleep();
+}
+/*------------------------------------------------------------------------------------*/
+void u_setConsignaNocturna ( void )
+{
+	// Abro la valvula 1
+	// Cierro la valvula 2
+
+	 MCP_outsPulse( systemVars.consigna.chVA , 0, 100 );	// Abro la valvula 1
+	 vTaskDelay( ( TickType_t)( 1000 / portTICK_RATE_MS ) );
+	 MCP_outsPulse( systemVars.consigna.chVB , 1, 100 );	// Cierro la valvula 2
+
+	 systemVars.consigna.consignaAplicada = CONSIGNA_NOCTURNA;
+
+	 // Dejo el sistema de salidas en reposo para que no consuma
+	 MCP_outputA1Disable();
+	 MCP_outputA2Disable();
+	 MCP_outputB1Disable();
+	 MCP_outputB2Disable();
+
+	 MCP_outputsSleep();
+
+}
+//------------------------------------------------------------------------------------

@@ -282,7 +282,18 @@ s08 MCP_outsPulse( u08 channel, u08 phase, u16 delay )
 	// de duracion 'delay'
 	// Deja el sistema en reposo ( sleep )
 
+	// OJO: El MCP1 tiene por defecto los pull-ups correspondientes a las salidas deshabilitados
+	// para ahorrar corriente. Lo que debo hacer es activar los pullups, generar los pulsos y desactivarlos.
+
 s08 retS = FALSE;
+u08 regOlatA, regOlatB;
+
+
+
+	MCP_read( MCP1_ADDR, MCP1_GPPUA, &regOlatA );
+	MCP_write( MCP1_ADDR, MCP1_GPPUA, 0xFF );
+	MCP_read( MCP1_ADDR, MCP1_GPPUB, &regOlatB );
+	MCP_write( MCP1_ADDR, MCP1_GPPUB, 0xFF );
 
 	MCP_outputsNoSleep();
 	MCP_outputsNoReset();
@@ -321,6 +332,10 @@ s08 retS = FALSE;
 	}
 
 	MCP_outputsSleep();
+
+	MCP_write( MCP1_ADDR, MCP1_GPPUA, regOlatA );
+	MCP_write( MCP1_ADDR, MCP1_GPPUB, regOlatB );
+
 	return(retS);
 
 }

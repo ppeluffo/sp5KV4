@@ -374,7 +374,6 @@ inline u08 pvI2C_getStatus(void)
 inline s08 pvI2C_waitForComplete(void)
 {
 TimeOut_t xTimeOut;
-portTickType xTicksToWait = 10;
 
 	// inicializo el timeout
 	vTaskSetTimeOutState( &xTimeOut );

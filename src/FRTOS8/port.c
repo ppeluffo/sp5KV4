@@ -443,43 +443,6 @@ unsigned long ulCompareMatch;
 /*
  * Setup timer 1 compare match A to generate a tick interrupt.
  */
-static void prvSetupTimerInterrupt_1( void )
-{
-unsigned long ulCompareMatch;
-unsigned char ucHighByte, ucLowByte;
-
-	/* Using 16bit timer 1 to generate the tick.  Correct fuses must be
-	selected for the configCPU_CLOCK_HZ clock. */
-
-	ulCompareMatch = configCPU_CLOCK_HZ / configTICK_RATE_HZ;
-
-	/* We only have 16 bits so have to scale to get our required tick rate. */
-	ulCompareMatch /= portCLOCK_PRESCALER;
-
-	/* Adjust for correct value. */
-	ulCompareMatch -= ( unsigned long ) 1;
-
-	/* Setup compare match value for compare match A.  Interrupts are disabled
-	before this is called so we need not worry here. */
-	ucLowByte = ( unsigned char ) ( ulCompareMatch & ( unsigned long ) 0xff );
-	ulCompareMatch >>= 8;
-	ucHighByte = ( unsigned char ) ( ulCompareMatch & ( unsigned long ) 0xff );
-	OCR1AH = ucHighByte;
-	OCR1AL = ucLowByte;
-
-	/* Setup clock source and compare match behaviour. */
-	ucLowByte = portCLEAR_COUNTER_ON_MATCH | portPRESCALE_64;
-	TCCR1A = 0x00;
-	TCCR1B = ucLowByte;
-	TCCR1C = 0x00;
-
-	/* Enable the interrupt - this is okay as interrupt are currently globally
-	disabled. */
-	ucLowByte = TIMSK1;
-	ucLowByte |= portCOMPARE_MATCH_A_INTERRUPT_ENABLE;
-	TIMSK1 = ucLowByte;
-}
-/*-----------------------------------------------------------*/
 
 #if configUSE_PREEMPTION == 1
 

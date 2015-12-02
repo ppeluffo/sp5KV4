@@ -35,11 +35,11 @@ Peripheral_Descriptor_t FreeRTOS_open(const u08 port, const u32 flags)
 		break;
 	}
 
-	// no retorno nada y el compilador se encarga.
+	return(NULL);
 
 }
 //------------------------------------------------------------------------------------
-portBASE_TYPE FreeRTOS_ioctl( Peripheral_Descriptor_t const xPeripheral, uint32_t ulRequest, void *pvValue )
+int FreeRTOS_ioctl( Peripheral_Descriptor_t const xPeripheral, uint32_t ulRequest, void *pvValue )
 {
 Peripheral_Control_t *pxPeripheralControl = ( Peripheral_Control_t * ) xPeripheral;
 
@@ -55,11 +55,12 @@ Peripheral_Control_t *pxPeripheralControl = ( Peripheral_Control_t * ) xPeripher
 			FreeRTOS_I2C_ioctl( xPeripheral, ulRequest, pvValue );
 			break;
 	}
+	return(0);
 }
 //------------------------------------------------------------------------------------
 // FUNCIONES DE UART PROVISTAS AL FREERTOS
 //------------------------------------------------------------------------------------
-portBASE_TYPE FreeRTOS_UART_open( Peripheral_Control_t * const pxPeripheralControl, const u32 flags )
+int FreeRTOS_UART_open( Peripheral_Control_t * const pxPeripheralControl, const u32 flags )
 
 {
 	/* Los dispositivos tipo UART requieren inicializar sus queues y un semaforo.
@@ -102,7 +103,7 @@ UART_device_control_t *pxNewUart;
 			pxNewUart->rxStruct = xQueueCreate( pxNewUart->rxBufferLength, ( unsigned portBASE_TYPE ) sizeof( signed portCHAR ) );
 			break;
 		case FIFO:
-			pxNewUart->rxStruct = xFifoCreate( pxNewUart->rxBufferLength, NULL );
+			pxNewUart->rxStruct = xFifoCreate( pxNewUart->rxBufferLength, 0 );
 			break;
 		}
 		// TX
@@ -114,7 +115,7 @@ UART_device_control_t *pxNewUart;
 			pxNewUart->txStruct = xQueueCreate( pxNewUart->txBufferLength, ( unsigned portBASE_TYPE ) sizeof( signed portCHAR ) );
 			break;
 		case FIFO:
-			pxNewUart->txStruct = xFifoCreate( pxNewUart->txBufferLength, NULL );
+			pxNewUart->txStruct = xFifoCreate( pxNewUart->txBufferLength, 0 );
 			break;
 		}
 		break;
@@ -132,7 +133,7 @@ UART_device_control_t *pxNewUart;
 			pxNewUart->rxStruct = xQueueCreate( pxNewUart->rxBufferLength, ( unsigned portBASE_TYPE ) sizeof( signed portCHAR ) );
 			break;
 		case FIFO:
-			pxNewUart->rxStruct = xFifoCreate( pxNewUart->rxBufferLength, NULL );
+			pxNewUart->rxStruct = xFifoCreate( pxNewUart->rxBufferLength, 0 );
 		}
 		// TX
 		switch ( pxNewUart->txBufferType ) {
@@ -143,7 +144,7 @@ UART_device_control_t *pxNewUart;
 			pxNewUart->txStruct = xQueueCreate( pxNewUart->txBufferLength, ( unsigned portBASE_TYPE ) sizeof( signed portCHAR ) );
 			break;
 		case FIFO:
-			pxNewUart->txStruct = xFifoCreate( pxNewUart->txBufferLength, NULL );
+			pxNewUart->txStruct = xFifoCreate( pxNewUart->txBufferLength, 0 );
 			break;
 		}
 		break;
@@ -162,6 +163,7 @@ UART_device_control_t *pxNewUart;
 	sbi(UARTCTL_DDR, UARTCTL);
 	cbi(UARTCTL_PORT, UARTCTL);
 
+	return(0);
 }
 //------------------------------------------------------------------------------------
 size_t FreeRTOS_UART_write( Peripheral_Descriptor_t const pxPeripheral, const void *pvBuffer, const size_t xBytes )
@@ -177,7 +179,6 @@ size_t bytes2tx;
 Peripheral_Control_t * const pxPeripheralControl = ( Peripheral_Control_t * const ) pxPeripheral;
 UART_device_control_t *pUart;
 size_t wBytes = 0;
-s08 stop, start;
 
 	pUart = pxPeripheralControl->phDevice;
 	// Controlo no hacer overflow en la cola de trasmision
@@ -198,7 +199,7 @@ s08 stop, start;
 	}
 
 	// Cargo el buffer en la cola de trasmision.
-	p = pvBuffer;
+	p = (char *)pvBuffer;
 	while (*p && (bytes2tx-- > 0) ) {
 
 		// Voy cargando la cola de a uno.
@@ -282,6 +283,7 @@ UART_device_control_t *pUart;
 	pUart = pxPeripheralControl->phDevice;
 
 	xTicksToWait = pxPeripheralControl->xBlockTime;
+	xTicksToWait = 1;
 	vTaskSetTimeOutState( &xTimeOut );
 
 	/* Are there any more bytes to be received? */
@@ -289,12 +291,12 @@ UART_device_control_t *pUart;
 	{
 		/* Receive the next character. */
 		if ( pUart->rxBufferType == QUEUE ) {
-			if( xQueueReceive( pUart->rxStruct, &( pvBuffer[ xBytesReceived ] ), xTicksToWait ) == pdPASS ) {
+			if( xQueueReceive( pUart->rxStruct, &((char *)pvBuffer)[ xBytesReceived ], xTicksToWait ) == pdPASS ) {
 				xBytesReceived++;
 			}
 		} else {
 			// Los fifo no tienen timeout, retornan enseguida
-			if( xFifoReceive( pUart->rxStruct, &( pvBuffer[ xBytesReceived ] ), xTicksToWait ) == pdPASS ) {
+			if( xFifoReceive( pUart->rxStruct, &((char *)pvBuffer)[ xBytesReceived ], xTicksToWait ) == pdPASS ) {
 				xBytesReceived++;
 			} else {
 				// Espero xTicksToWait antes de volver a chequear
@@ -338,7 +340,7 @@ UART_device_control_t *pUart;
 			xSemaphoreGive( pxPeripheralControl->xBusSemaphore );
 			break;
 		case ioctlSET_TIMEOUT:
-			pxPeripheralControl->xBlockTime = pvValue;	// REVISAR
+			pxPeripheralControl->xBlockTime = *((u08 *)pvValue);
 			break;
 		case ioctl_UART_CLEAR_RX_BUFFER:
 			if ( pUart->rxBufferType == QUEUE) {
@@ -362,13 +364,16 @@ UART_device_control_t *pUart;
 
 }
 //------------------------------------------------------------------------------------
-void pvFreeRTOS_UART1_writeChar (char *c)
+void pvFreeRTOS_UART1_writeChar (unsigned char c)
 {
 	// Funcion intermedia necesaria por cmdline para escribir de a 1 caracter en consola
 	// El tema es que el prototipo de funcion que requiere cmdlineSetOutputFunc no se ajusta
 	// al de FreeRTOS_UART_write, por lo que defino esta funcion intermedia.
 
-	FreeRTOS_UART_write(&pdUART1,&c, sizeof(char));
+char cChar;
+
+	cChar = c;
+	FreeRTOS_UART_write(&pdUART1,&cChar, sizeof(char));
 }
 //------------------------------------------------------------------------------------
 char *FreeRTOS_UART_getFifoPtr(Peripheral_Control_t *UART)
@@ -386,7 +391,7 @@ char *p;
 		return(NULL);
 
 	uartFifo = (fifo_handle_s *) uartDevice->rxStruct;
-	p = uartFifo->buff;
+	p = (char *)uartFifo->buff;
 	return(p);
 }
 //------------------------------------------------------------------------------------
@@ -416,6 +421,8 @@ I2C_device_control_t *pxNewI2C;
 		pxPeripheralControl->phDevice = pxNewI2C;
 		// Abro e inicializo el puerto I2C solo la primera vez que soy invocado
 		i2c_init();
+
+		return(1);
 }
 //------------------------------------------------------------------------------------
 size_t FreeRTOS_I2C_write( Peripheral_Descriptor_t const pxPeripheral, const void *pvBuffer, const size_t xBytes )

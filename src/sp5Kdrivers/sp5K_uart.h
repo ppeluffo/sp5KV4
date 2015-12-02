@@ -58,7 +58,7 @@ BaseType_t xFifoSend( fifoHandle_t xFifo,const char *cChar, TickType_t xTicksToW
 BaseType_t xFifoSendFromISR( fifoHandle_t xFifo,const char *cChar, TickType_t xTicksToWait );
 BaseType_t xFifoReceive( fifoHandle_t xFifo,char *cChar, TickType_t xTicksToWait );
 BaseType_t xFifoReceiveFromISR( fifoHandle_t xFifo, char *cChar, TickType_t xTicksToWait );
-BaseType_t xFifoReset( fifoHandle_t xFifo );
+int xFifoReset( fifoHandle_t xFifo );
 size_t uxFifoSpacesAvailable( fifoHandle_t xFifo );
 size_t uxFifoMessagesWaiting( fifoHandle_t xFifo );
 

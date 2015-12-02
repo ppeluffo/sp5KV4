@@ -85,7 +85,7 @@
 // constants/macros/typdefs
 typedef void (*CmdlineFuncPtrType)(void);
 
-u08 SP5K_CmdlineBuffer[CMDLINE_BUFFERSIZE];
+char SP5K_CmdlineBuffer[CMDLINE_BUFFERSIZE];
 
 // functions
 

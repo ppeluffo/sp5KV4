@@ -9,6 +9,7 @@
 #define SRC_FRTOS_IO_FRTOS_IO_H_
 
 #include <stdlib.h>
+#include <string.h>
 #include <avr/io.h>
 #include <avr/pgmspace.h>
 #include <sp5Klibs/avrlibdefs.h>
@@ -59,7 +60,7 @@ typedef struct {
 Peripheral_Control_t pdUART0, pdUART1, pdI2C;
 
 Peripheral_Descriptor_t FreeRTOS_open(const u08 port, const u32 flags);
-portBASE_TYPE FreeRTOS_ioctl( Peripheral_Descriptor_t const xPeripheral, uint32_t ulRequest, void *pvValue );
+int FreeRTOS_ioctl( Peripheral_Descriptor_t const xPeripheral, uint32_t ulRequest, void *pvValue );
 #define FreeRTOS_write( xPeripheral, pvBuffer, xBytes ) ( ( Peripheral_Control_t * ) xPeripheral )->write( ( ( Peripheral_Control_t * ) xPeripheral ), ( pvBuffer ), ( xBytes ) )
 #define FreeRTOS_read( xPeripheral, pvBuffer, xBytes ) ( ( Peripheral_Control_t * ) xPeripheral )->read( ( ( Peripheral_Control_t * ) xPeripheral ), ( pvBuffer ), ( xBytes ) )
 
@@ -100,11 +101,11 @@ typedef struct {
 
 //------------------------------------------------------------------------------------
 
-portBASE_TYPE FreeRTOS_UART_open( Peripheral_Control_t * const pxPeripheralControl, const u32 flags );
+int FreeRTOS_UART_open( Peripheral_Control_t * const pxPeripheralControl, const u32 flags );
 size_t FreeRTOS_UART_write( Peripheral_Descriptor_t const pxPeripheral, const void *pvBuffer, const size_t xBytes );
 size_t FreeRTOS_UART_read( Peripheral_Descriptor_t const pxPeripheral, void * const pvBuffer, const size_t xBytes );
 portBASE_TYPE FreeRTOS_UART_ioctl( Peripheral_Descriptor_t pxPeripheral, uint32_t ulRequest, void *pvValue );
-void pvFreeRTOS_UART1_writeChar (char *c);
+void pvFreeRTOS_UART1_writeChar (unsigned char c);
 
 char *FreeRTOS_UART_getFifoPtr(Peripheral_Control_t *UART);
 
