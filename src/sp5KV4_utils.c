@@ -249,7 +249,7 @@ int i;
 	systemVars.dbm = 0;
 	systemVars.dcd = 0;
 	systemVars.ri = 0;
-	systemVars.debugLevel = D_BASIC + D_GPRS;
+	systemVars.debugLevel = D_BASIC;
 	systemVars.wrkMode = WK_NORMAL;
 
 	// Cuando arranca si la EE no esta inicializada puede dar cualquier cosa.
