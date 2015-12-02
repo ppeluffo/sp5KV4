@@ -263,9 +263,7 @@ static int trD00(void)
 	tickCount = xTaskGetTickCount();
 	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD00 pwroff sensors\r\n\0"), tickCount);
 
-	if ( (systemVars.debugLevel & D_DATA) != 0) {
-		FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
-	}
+	u_debugPrint(D_DATA, aIn_printfBuff, sizeof(aIn_printfBuff) );
 
 	pv_AINprintExitMsg(0);
 	return(tkdST_STANDBY);
@@ -290,9 +288,7 @@ static int trD01(void)
 	tickCount = xTaskGetTickCount();
 	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD01 pwroff sensors\r\n\0"), tickCount);
 
-	if ( (systemVars.debugLevel & D_DATA) != 0) {
-		FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
-	}
+	u_debugPrint(D_DATA, aIn_printfBuff, sizeof(aIn_printfBuff) );
 
 	pv_AINprintExitMsg(1);
 	return(tkdST_STANDBY);
@@ -367,37 +363,27 @@ u16 adcRetValue;
 	//
 	tickCount = xTaskGetTickCount();
 	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD05:\r\n\0"), tickCount);
-	if ( (systemVars.debugLevel & D_DATA) != 0) {
-		FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
-	}
+	u_debugPrint(D_DATA, aIn_printfBuff, sizeof(aIn_printfBuff) );
 
 	ADS7827_readCh0( &adcRetValue);	// AIN0->ADC3;
 	rAIn[0] += adcRetValue;
 	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("\tch_0,adc_3,val=%d,r0=%.0f\r\n\0"),adcRetValue, rAIn[0]);
-	if ( (systemVars.debugLevel & D_DATA) != 0) {
-		FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
-	}
+	u_debugPrint(D_DATA, aIn_printfBuff, sizeof(aIn_printfBuff) );
 
 	ADS7827_readCh1( &adcRetValue); // AIN1->ADC5;
 	rAIn[1] += adcRetValue;
 	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("\tch_1,adc_5,val=%d,r1=%.0f\r\n\0"),adcRetValue, rAIn[1]);
-	if ( (systemVars.debugLevel & D_DATA) != 0) {
-		FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
-	}
+	u_debugPrint(D_DATA, aIn_printfBuff, sizeof(aIn_printfBuff) );
 
 	ADS7827_readCh2( &adcRetValue); // AIN2->ADC7;
 	rAIn[2] += adcRetValue;
 	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("\tch_2,adc_7,val=%d,r1=%.0f\r\n\0"), adcRetValue, rAIn[2]);
-	if ( (systemVars.debugLevel & D_DATA) != 0) {
-		FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
-	}
+	u_debugPrint(D_DATA, aIn_printfBuff, sizeof(aIn_printfBuff) );
 
 	ADS7827_readBatt( &adcRetValue); // BATT->ADC1;
 	rAIn[3] += adcRetValue;
 	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("\tch_3,adc_1,val=%d,r1=%.0f\r\n\0"), adcRetValue, rAIn[3]);
-	if ( (systemVars.debugLevel & D_DATA) != 0) {
-		FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
-	}
+	u_debugPrint(D_DATA, aIn_printfBuff, sizeof(aIn_printfBuff) );
 
 	pv_AINprintExitMsg(5);
 	return(tkdST_POLLING);
@@ -421,9 +407,7 @@ StatBuffer_t pxFFStatBuffer;
 		MCP_setAnalogPwr( 0 );
 		tickCount = xTaskGetTickCount();
 		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD06 pwroff sensors\r\n\0"), tickCount);
-		if ( (systemVars.debugLevel & D_DATA) != 0) {
-			FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
-		}
+		u_debugPrint(D_DATA, aIn_printfBuff, sizeof(aIn_printfBuff) );
 	}
 
 	// Promedio canales analogicos 0..2 y bateria (3)
@@ -431,9 +415,7 @@ StatBuffer_t pxFFStatBuffer;
 		rAIn[channel] /= CICLOS_POLEO;
 		tickCount = xTaskGetTickCount();
 		snprintf_P( aIn_printfBuff,CHAR128,PSTR(".[%06lu] tkAnalogIn::trD06 AvgCh[%d]=%.1f\r\n\0"), tickCount, channel, rAIn[channel]);
-		if ( (systemVars.debugLevel & D_DATA) != 0) {
-			FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
-		}
+		u_debugPrint(D_DATA, aIn_printfBuff, sizeof(aIn_printfBuff) );
 	}
 
 	// Convierto de ADC a magnitudes.
@@ -527,11 +509,9 @@ quit:
 /*------------------------------------------------------------------------------------*/
 static void pv_AINprintExitMsg(u08 code)
 {
-	if ( (systemVars.debugLevel & D_DATA) != 0) {
-		tickCount = xTaskGetTickCount();
-		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::exit TR%02d\r\n\0"), tickCount,code);
-		FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
-	}
+	tickCount = xTaskGetTickCount();
+	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::exit TR%02d\r\n\0"), tickCount,code);
+	u_debugPrint(D_DATA, aIn_printfBuff, sizeof(aIn_printfBuff) );
 }
 /*------------------------------------------------------------------------------------*/
 static void pv_AinLoadParameters( void )

@@ -128,7 +128,7 @@ static void cmdHelpFunction(void)
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  loglevel (none, info, all)\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
-	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  A{0..3} aname imin imax mmin mmax\r\n\0"));
+	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  A{0..2} aname imin imax mmin mmax\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  D{0..1} dname magp\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
@@ -1016,7 +1016,7 @@ char *p;
 s08 retS = FALSE;
 
 	p = s1;
-	while (*p != NULL) {
+	while (*p != 0) {
 		p++;
 		length++;
 	}

@@ -166,7 +166,7 @@ typedef struct {
 	// Variables de trabajo.
 	// Tamanio: 302 bytes para 3 canales.
 
-	u16 dummyBytes;
+	u08 dummyBytes;
 	u08 initByte;
 
 	char dlgId[DLGID_LENGTH];
@@ -282,6 +282,8 @@ s32 u_readTimeToNextDial(void);
 s08 u_modemPwrStatus(void);
 s08 u_terminalPwrStatus(void);
 s08 u_wrRtc(char *s);
+
+void u_debugPrint(u08 debugCode, char *msg, u16 size);
 
 //------------------------------------------------------------------------------------
 // PANIC CODES

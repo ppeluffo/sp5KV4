@@ -125,9 +125,8 @@ u32 tickCount;
 		if ( pin == 1 ) { snprintf_P( dIn_printfBuff,sizeof(dIn_printfBuff),PSTR(".[%06lu] tkDigitalIn: DCD off(%d)\r\n\0"), tickCount,pin );	}
 		if ( pin == 0 ) { snprintf_P( dIn_printfBuff,sizeof(dIn_printfBuff),PSTR(".[%06lu] tkDigitalIn: DCD on(%d)\r\n\0"), tickCount,pin );	}
 
-		if ( (systemVars.debugLevel & D_DIGITAL) != 0) {
-			FreeRTOS_write( &pdUART1, dIn_printfBuff, sizeof(dIn_printfBuff) );
-		}
+		u_debugPrint(D_DIGITAL, dIn_printfBuff, sizeof(dIn_printfBuff) );
+
 	}
 }
 /*------------------------------------------------------------------------------------*/
@@ -142,9 +141,8 @@ u32 tickCount;
 		systemVars.termsw = pin;
 		tickCount = xTaskGetTickCount();
 		snprintf_P( dIn_printfBuff,sizeof(dIn_printfBuff),PSTR(".[%06lu] tkDigitalIn: TERMSW=%d\r\n\0"), tickCount,pin );
-		if ( (systemVars.debugLevel & D_DIGITAL) != 0) {
-			FreeRTOS_write( &pdUART1, dIn_printfBuff, sizeof(dIn_printfBuff) );
-		}
+
+		u_debugPrint(D_DIGITAL, dIn_printfBuff, sizeof(dIn_printfBuff) );
 	}
 }
 /*------------------------------------------------------------------------------------*/
@@ -170,16 +168,14 @@ u32 tickCount;
 		if (din1 == 0 ) { digIn.pulses[1]++ ; debugQ = TRUE;}
 	} else {
 		snprintf_P( dIn_printfBuff,sizeof(dIn_printfBuff),PSTR("tkDigitalIn: READ DIN ERROR !!\r\n\0"));
-		if ( (systemVars.debugLevel & D_DIGITAL) != 0 ) {
-			FreeRTOS_write( &pdUART1, dIn_printfBuff, sizeof(dIn_printfBuff) );
-		}
+		u_debugPrint(D_DIGITAL, dIn_printfBuff, sizeof(dIn_printfBuff) );
 		goto quit;
 	}
 
 	if ( ((systemVars.debugLevel & D_DIGITAL) != 0) && debugQ ) {
 		tickCount = xTaskGetTickCount();
 		snprintf_P( dIn_printfBuff,sizeof(dIn_printfBuff),PSTR(".[%06lu] tkDigitalIn: din0=%.0f,din1=%.0f\r\n\0"), tickCount, digIn.pulses[0],digIn.pulses[1] );
-		FreeRTOS_write( &pdUART1, dIn_printfBuff, sizeof(dIn_printfBuff) );
+		u_debugPrint(( D_BASIC + D_DIGITAL ), dIn_printfBuff, sizeof(dIn_printfBuff) );
 	}
 
 quit:
