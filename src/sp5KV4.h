@@ -55,7 +55,7 @@
 // DEFINICION DEL TIPO DE SISTEMA
 //----------------------------------------------------------------------------
 #define SP5K_REV "4.0.3"
-#define SP5K_DATE "@ 20151201"
+#define SP5K_DATE "@ 20151208"
 
 #define SP5K_MODELO "sp5KV3 HW:avr1284P R5.0"
 #define SP5K_VERSION "FW:FRTOS8"
@@ -96,15 +96,19 @@ void tkConsignas(void * pvParameters);
 TaskHandle_t xHandle_tkCmd, xHandle_tkControl, xHandle_tkDigitalIn, xHandle_tkAIn, xHandle_tkGprs, xHandle_tkConsignas;
 
 s08 startTask;
-struct {
+typedef struct {
 	u08 resetCause;
-	u08 analogTR;
-	u08 controlTR;
-	u08 digitalTR;
-	u08 gprsTR;
+	u08 mcusr;
+	u08 analogCP;
+	u08 controlCP;
+	u08 digitalCP;
+	u08 gprsCP;
 	u08 securityFlag;
-} wdgStatus;
+} wdgStatus_t;
 
+wdgStatus_t wdgStatus, wdgStatusEE;
+
+#define EEADDR_WDG 16		// Direccion inicio de la EE de escritura del wdgStatus.
 
 // Mensajes entre tareas
 #define TKA_PARAM_RELOAD		0x01	// to tkAnalogIN: reload
@@ -216,6 +220,8 @@ typedef struct {
 } systemVarsType;	// 315 bytes
 
 systemVarsType systemVars,tmpSV;
+
+#define EEADDR_SV 32		// Direccion inicio de la EE de escritura del systemVars.
 
 //------------------------------------------------------------------------------------
 

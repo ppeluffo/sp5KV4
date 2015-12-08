@@ -25,6 +25,7 @@ TimerHandle_t dailyResetTimer;
 void  pv_dailyResetTimerCallBack( TimerHandle_t pxTimer );
 
 s08 f_terminalPrendida;
+s08 f_terminalCallback;
 
 //------------------------------------------------------------------------------------
 void tkControl(void * pvParameters)
@@ -66,13 +67,18 @@ StatBuffer_t pxFFStatBuffer;
 		u_panic(P_CTL_TIMERSTART);
 
 	f_terminalPrendida = TRUE; 	// Se prende al inicializar el MCP.
+	f_terminalCallback = FALSE;
 	// Arranco el timer de control  de la terminal
 	if ( xTimerStart( terminalTimer, 0 ) != pdPASS )
 		u_panic(P_CTL_TIMERSTART);
 
 	// Inicializo el watchdog del micro.
 	wdt_enable(WDTO_8S);
+//	cli();
 	wdt_reset();
+//	WDTCSR |= (1<<WDCE) | (1<<WDE);
+//	WDTCSR = 0x61;
+//	sei();
 
 	 // Initialise the xLastWakeTime variable with the current time.
 	 xLastWakeTime = xTaskGetTickCount();
@@ -102,7 +108,6 @@ StatBuffer_t pxFFStatBuffer;
 		pv_flashLeds();
 		pv_checkWdg();
 		pv_checkTerminal();
-
 	}
 }
 //------------------------------------------------------------------------------------
@@ -210,10 +215,10 @@ u08 pos;
 //------------------------------------------------------------------------------------
 void pv_checkWdg(void )
 {
-	// Cada tarea periodicamente pone su wdg flag en 0. Esto hace que al chequearse c/2s
+	// Cada tarea periodicamente pone su wdg flag en 0. Esto hace que al chequearse c/3s
 	// deban estar todas en 0 para asi resetear el wdg del micro.
 
-static u08 l_timer = 1;
+static u08 l_timer = 2;
 
 	if (l_timer-- > 0 )
 		return;
@@ -221,27 +226,8 @@ static u08 l_timer = 1;
 	l_timer = 1;
 	if ( systemWdg == 0 ) {
 		wdt_reset();
-		systemWdg = WDG_CTL + WDG_CMD + WDG_DIN + WDG_AIN + WDG_GPRS;
+		systemWdg = WDG_CTL + WDG_CMD + WDG_CSG + WDG_DIN + WDG_AIN + WDG_GPRS;
 	}
-}
-//------------------------------------------------------------------------------------
-void pv_checkTerminal(void)
-{
-	// Monitoreo si la terminal esta apagada y llega una senal del termsw para
-	// prenderla
-
-static u08 l_termsw = 1;
-
-	if ( ( systemVars.termsw == 1 ) && ( l_termsw == 0 ) ) {
-		// Indica que llego un flanco positivo
-		// Si la terminal esta apagada la prendo
-		MCP_setTermPwr(1);
-		f_terminalPrendida = TRUE;
-		xTimerReset( terminalTimer, 1 );
-	}
-
-	l_termsw = systemVars.termsw;
-
 }
 //------------------------------------------------------------------------------------
 void  pv_dailyResetTimerCallBack( TimerHandle_t pxTimer )
@@ -258,30 +244,92 @@ static s16 resetCounter = 1440;
 	}
 }
 //------------------------------------------------------------------------------------
+void pv_checkTerminal(void)
+{
+
+static u08 l_termsw = 1; // Estado anterior del pin de la terminal
+
+	// Si estoy en modo CONTINUO no apago la terminal ni dejo de flashear los leds
+	if ( systemVars.pwrMode == PWR_CONTINUO) {
+
+		// Si la terminal esta apagada la prendo
+		if ( ! f_terminalPrendida ) {
+			// prendo
+			MCP_setTermPwr(1);
+			f_terminalPrendida = TRUE;
+			// y rearranco el timer
+			xTimerReset( terminalTimer, 1 );
+			f_terminalCallback = FALSE;
+		}
+
+		// Si expiro el timer lo rearranco.
+		if ( f_terminalCallback ) {
+			while ( xTimerReset( terminalTimer, 1 ) != pdPASS )
+				taskYIELD();
+			f_terminalCallback = FALSE;
+		}
+
+		goto quit;
+	}
+
+	if ( systemVars.pwrMode == PWR_DISCRETO) {
+
+		// Si la terminal esta apagada y se activo el switch la prendo
+		if ( f_terminalPrendida == FALSE ) {
+
+			// Si el pin esta en 1 y antes estaba en 0 ( Indica que llego un flanco positivo )
+			if ( ( systemVars.termsw == 1 ) && ( l_termsw == 0 ) ) {
+				// prendo
+				MCP_setTermPwr(1);
+				f_terminalPrendida = TRUE;
+				// y rearranco el timer
+				xTimerReset( terminalTimer, 1 );
+				f_terminalCallback = FALSE;
+				snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("Terminal going on ..\r\n\0"));
+				vTaskDelay( ( TickType_t)( 500 / portTICK_RATE_MS ) );
+				FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
+			}
+			goto quit;
+		}
+
+		// Si la terminal estaba prendida y expiro el timer...
+		if ( f_terminalPrendida == TRUE ) {
+
+			if ( !f_terminalCallback ) {
+				goto quit;
+			}
+
+			// Expiro el timer:
+			// Caso 1: el switch esta activo: reinicio el timer
+			if ( systemVars.termsw == 1 ) {
+				while ( xTimerReset( terminalTimer, 1 ) != pdPASS )
+					taskYIELD();
+				f_terminalCallback = FALSE;
+			} else {
+				// Apago
+				snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("Terminal going off ..\r\n\0"));
+				FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
+				vTaskDelay( ( TickType_t)( 500 / portTICK_RATE_MS ) );
+				MCP_setTermPwr(0);
+				f_terminalPrendida = FALSE;
+			}
+		}
+	}
+
+quit:
+
+// Guardo el estado.
+	l_termsw = systemVars.termsw;
+	return;
+
+
+}
+//------------------------------------------------------------------------------------
 void  pv_terminalTimerCallBack( TimerHandle_t pxTimer )
 {
 	// Luego de haber arrancado el FREERTOS, a los 2 mins. expira este timer.
 	// y debo ver si apago la terminal o la dejo prendida.
-
-	// Si estoy en modo CONTINUO no apago la terminal ni dejo de flashear los leds
-	if ( systemVars.pwrMode == PWR_CONTINUO) {
-		return;
-	}
-
-	// Aqui estoy en modo DISCRETO.
-	// 1- Si el termsw esta activado, rearranco el timer
-	if ( systemVars.termsw == 1 ) {
-		while ( xTimerReset( terminalTimer, 1 ) != pdPASS )
-			taskYIELD();
-	} else {
-	// 2 - El termsw esta off o sea que apago la terminal.
-		snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("Terminal going off ..\r\n\0"));
-		FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
-		vTaskDelay( ( TickType_t)( 500 / portTICK_RATE_MS ) );
-		MCP_setTermPwr(0);
-		f_terminalPrendida = FALSE;
-	}
-
+	f_terminalCallback = TRUE;
 }
 //------------------------------------------------------------------------------------
 s08 u_terminalPwrStatus(void)

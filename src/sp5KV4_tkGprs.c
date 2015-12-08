@@ -978,10 +978,10 @@ static int gTR_c01(void)
 	pv_GPRSprintRsp();
 
 	// Borro todos los SMS de la memoria
-	FreeRTOS_ioctl( &pdUART0,ioctl_UART_CLEAR_RX_BUFFER, NULL);
-	FreeRTOS_write( &pdUART0, "AT+CMGD=0,4\r\0", sizeof("AT+CMGD=0,4\r\0") );
-	vTaskDelay( (portTickType)( 100 / portTICK_RATE_MS ) );
-	pv_GPRSprintRsp();
+//	FreeRTOS_ioctl( &pdUART0,ioctl_UART_CLEAR_RX_BUFFER, NULL);
+//	FreeRTOS_write( &pdUART0, "AT+CMGD=0,4\r\0", sizeof("AT+CMGD=0,4\r\0") );
+//	vTaskDelay( (portTickType)( 100 / portTICK_RATE_MS ) );
+//	pv_GPRSprintRsp();
 
 	// Deshabilito los mensajes
 	FreeRTOS_ioctl( &pdUART0,ioctl_UART_CLEAR_RX_BUFFER, NULL);
@@ -1872,13 +1872,13 @@ u08 i;
 	pos = 0;
 	// Configuracion de canales analogicos
 	for ( i = 0; i < NRO_CHANNELS; i++) {
-		pos += snprintf_P( &gprs_printfBuff[pos],( sizeof(gprs_printfBuff) - pos ),PSTR("&A%d=%s,%d,%d,%d,%.1f"), i,systemVars.aChName[i],systemVars.Imin[i], systemVars.Imax[i], systemVars.Mmin[i], systemVars.Mmax[i]);
+		pos += snprintf_P( &gprs_printfBuff[pos],( sizeof(gprs_printfBuff) - pos ),PSTR("&A%d=%s,%d,%d,%d,%.02f"), i,systemVars.aChName[i],systemVars.Imin[i], systemVars.Imax[i], systemVars.Mmin[i], systemVars.Mmax[i]);
 	}
 	// Configuracion de canales digitales
-	pos += snprintf_P( &gprs_printfBuff[pos],( sizeof(gprs_printfBuff) - pos ),PSTR("&D0=%s,%.2f"),systemVars.dChName[0],systemVars.magPP[0]);
-	pos += snprintf_P( &gprs_printfBuff[pos],( sizeof(gprs_printfBuff) - pos ),PSTR("&D1=%s,%.2f"),systemVars.dChName[1],systemVars.magPP[1]);
+	pos += snprintf_P( &gprs_printfBuff[pos],( sizeof(gprs_printfBuff) - pos ),PSTR("&D0=%s,%.02f"),systemVars.dChName[0],systemVars.magPP[0]);
+	pos += snprintf_P( &gprs_printfBuff[pos],( sizeof(gprs_printfBuff) - pos ),PSTR("&D1=%s,%.02f"),systemVars.dChName[1],systemVars.magPP[1]);
 	// Configuracion de salidas
-//	pos += snprintf_P( &gprs_printfBuff[pos],( CHAR256 - pos ),PSTR("&CONS=%d,%d,%d,%d,%d\0"),systemVars.consigna.status,u_convertMINS2hhmm(systemVars.consigna.horaConsDia),u_convertMINS2hhmm(systemVars.consigna.horaConsNoc),systemVars.consigna.chVA, systemVars.consigna.chVB);
+	pos += snprintf_P( &gprs_printfBuff[pos],( CHAR256 - pos ),PSTR("&CONS=%d,%d,%d,%d,%d\0"),systemVars.consigna.status,u_convertMINS2hhmm(systemVars.consigna.horaConsDia),u_convertMINS2hhmm(systemVars.consigna.horaConsNoc),systemVars.consigna.chVA, systemVars.consigna.chVB);
 	// Reset status
 	pos += snprintf_P( &gprs_printfBuff[pos],( CHAR256 - pos ),PSTR("&WDG=%d\0"),wdgStatus.resetCause );
 	// GPRS sent

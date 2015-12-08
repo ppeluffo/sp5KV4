@@ -6,6 +6,11 @@
  * git remote add REM_SP5KV4 https://github.com/ppeluffo/sp5KV4.git
  * git push -u REM_SP5KV4 master
  *
+ * WATCHDOG:
+ * Para hacer un mejor seguimiento de las fallas, agrego a c/estado un nro.
+ * Por otro lado, el WDG lo manejo en modo interrupcion / reset de modo que ante
+ * un problema, la interrupcion guarda el estado y luego se resetea.
+ * Al arrancar, leo el estado y lo trasmito.
  *
  *
  * ----------------------------------------------------------------------------------------------------------------
@@ -46,6 +51,11 @@ unsigned int i,j;
 		for (j=0; j<1000; j++)
 				;
 
+	// Leo el estado anterior al reset.
+//	eeprom_read_block((u08 *)&wdgStatusEE, (uint8_t *) EEADDR_WDG, sizeof( wdgStatus ));
+	// y borro la flag.
+//	eeprom_write_byte( (uint8_t *)( EEADDR_WDG + sizeof( wdgStatus ) - 1), 0 );
+
 	//----------------------------------------------------------------------------------------
 
 	pv_initMPU();
@@ -83,6 +93,10 @@ unsigned int i,j;
 /*------------------------------------------------------------------------------------*/
 static void pv_initMPU(void)
 {
+	// Son acciones que se hacen antes de arrancar el RTOS
+
+	// Leo la configuracion de la EEprom interna
+
 	// Configuro el modo de Sleep.
 	set_sleep_mode(SLEEP_MODE_PWR_SAVE);
 }
@@ -99,4 +113,21 @@ void vApplicationIdleHook( void )
 	}
 
 }
+/*------------------------------------------------------------------------------------*/
+//ISR( WDT_vect )
+//{
+/* Handler (ISR) de WDG.
+ * Guarda el estado del sistema para que al reiniciarse se mande por INIT frame
+*/
+
+//	 wdgStatus.mcusr = MCUSR;
+//	 wdgStatus.securityFlag = 'A';
+
+	 // Salvo el estado
+//	 eeprom_write_block( (u08 *)&wdgStatus, (uint8_t *) EEADDR_WDG, sizeof( wdgStatus ));
+//	 // Y me reseteo.
+//	 wdt_enable(WDTO_1S);
+//	 while(1) {}
+//}
+
 /*------------------------------------------------------------------------------------*/

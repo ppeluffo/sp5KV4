@@ -75,19 +75,27 @@ u08 ticks;
 	{
 		u_clearWdg(WDG_CMD);
 
-		c = '\0';	// Lo borro para que luego del un CR no resetee siempre el timer.
-		// el read se bloquea 50ms. lo que genera la espera.
-		while ( FreeRTOS_read( &pdUART1, &c, 1 ) == 1 ) {
-			cmdlineInputFunc(c);
-		}
+		if ( u_terminalPwrStatus() ) {
+			// Solo si la terminal esta prendida leo datos
 
-		// Mientras escribo comandos no apago la terminal
-		if (c=='\r') {
-			u_restartTimerTerminal();
-		}
+			c = '\0';	// Lo borro para que luego del un CR no resetee siempre el timer.
+			// el read se bloquea 50ms. lo que genera la espera.
+			while ( FreeRTOS_read( &pdUART1, &c, 1 ) == 1 ) {
+				cmdlineInputFunc(c);
+			}
 
-		/* run the cmdline execution functions */
-		cmdlineMainLoop();
+			// Mientras escribo comandos no apago la terminal
+			if (c=='\r') {
+				u_restartTimerTerminal();
+			}
+
+			/* run the cmdline execution functions */
+			cmdlineMainLoop();
+
+		} else {
+			// Genero una espera para poder entrar en sleep mode
+			vTaskDelay( ( TickType_t)( 250 / portTICK_RATE_MS ) );
+		}
 
 	}
 }
@@ -154,8 +162,8 @@ static void cmdHelpFunction(void)
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  (SM)        vopen,vclose {0..3}\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
-//	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  (SM)        consigna{diurna|nocturna} ms\r\n\0"));
-//	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
+	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  (SM)        consigna{diurna|nocturna}\r\n\0"));
+	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  (SM) atcmd {cmd}\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("-read\r\n\0"));
@@ -234,6 +242,9 @@ StatBuffer_t pxFFStatBuffer;
 	}
 	pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR(" )\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
+
+//	pos = snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("dStatus(%d): rc[0x%X], mc[0x%X],aCP[%d]\r\n\0"), wdgStatusEE.securityFlag, wdgStatusEE.resetCause, wdgStatusEE.mcusr, wdgStatusEE.analogCP );
+//	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 
 	/* DlgId */
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("dlgid: %s\r\n\0"), systemVars.dlgId );
@@ -406,13 +417,13 @@ StatBuffer_t pxFFStatBuffer;
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 
 	for ( channel = 0; channel < NRO_CHANNELS; channel++) {
-		snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  a%d{%d-%dmA/%d-%.1f}(%s)\r\n\0"),channel, systemVars.Imin[channel],systemVars.Imax[channel],systemVars.Mmin[channel],systemVars.Mmax[channel], systemVars. aChName[channel] );
+		snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  a%d{%d-%dmA/%d-%.02f}(%s)\r\n\0"),channel, systemVars.Imin[channel],systemVars.Imax[channel],systemVars.Mmin[channel],systemVars.Mmax[channel], systemVars. aChName[channel] );
 		FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	}
 	/* Configuracion de canales digitales */
-	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  d0{%.2f p/p} (%s)\r\n\0"), systemVars.magPP[0],systemVars.dChName[0]);
+	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  d0{%.02f p/p} (%s)\r\n\0"), systemVars.magPP[0],systemVars.dChName[0]);
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
-	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  d1{%.2f p/p} (%s)\r\n\0"), systemVars.magPP[1],systemVars.dChName[1]);
+	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  d1{%.02f p/p} (%s)\r\n\0"), systemVars.magPP[1],systemVars.dChName[1]);
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 
 	/* Consignas */
@@ -443,13 +454,13 @@ StatBuffer_t pxFFStatBuffer;
 	pos += snprintf_P( &cmd_printfBuff[pos], sizeof(cmd_printfBuff), PSTR("%02d%02d%02d,"),Cframe.rtc.hour,Cframe.rtc.min, Cframe.rtc.sec );
 	// Valores analogicos
 	for ( channel = 0; channel < NRO_CHANNELS; channel++) {
-		pos += snprintf_P( &cmd_printfBuff[pos], sizeof(cmd_printfBuff), PSTR("%s=%.2f,"),systemVars.aChName[channel],Cframe.analogIn[channel] );
+		pos += snprintf_P( &cmd_printfBuff[pos], sizeof(cmd_printfBuff), PSTR("%s=%.02f,"),systemVars.aChName[channel],Cframe.analogIn[channel] );
 	}
 	// Valores digitales
-	pos += snprintf_P( &cmd_printfBuff[pos], sizeof(cmd_printfBuff), PSTR("%sP=%.2f,%sL=%d,"), systemVars.dChName[0],Cframe.dIn.pulses[0],systemVars.dChName[0],Cframe.dIn.level[0]);
-	pos += snprintf_P( &cmd_printfBuff[pos], sizeof(cmd_printfBuff), PSTR("%sP=%.2f,%sL=%d,"), systemVars.dChName[1],Cframe.dIn.pulses[1],systemVars.dChName[1],Cframe.dIn.level[1]);
+	pos += snprintf_P( &cmd_printfBuff[pos], sizeof(cmd_printfBuff), PSTR("%sP=%.02f,%sL=%d,"), systemVars.dChName[0],Cframe.dIn.pulses[0],systemVars.dChName[0],Cframe.dIn.level[0]);
+	pos += snprintf_P( &cmd_printfBuff[pos], sizeof(cmd_printfBuff), PSTR("%sP=%.02f,%sL=%d,"), systemVars.dChName[1],Cframe.dIn.pulses[1],systemVars.dChName[1],Cframe.dIn.level[1]);
 	// Bateria
-	pos += snprintf_P( &cmd_printfBuff[pos], sizeof(cmd_printfBuff), PSTR("bt=%.2f\r\n\0"),Cframe.batt );
+	pos += snprintf_P( &cmd_printfBuff[pos], sizeof(cmd_printfBuff), PSTR("bt=%.02f\r\n\0"),Cframe.batt );
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 
 }

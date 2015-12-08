@@ -46,7 +46,7 @@ uint32_t ulNotifiedValue;
 
 		}
 
-		// Una vez c/30s genero un mensaje
+		// Una vez c/30s chequeo las consignas.
 		pv_checkConsignas();
 
 	}
@@ -55,7 +55,7 @@ uint32_t ulNotifiedValue;
 // ------------------------------------------------------------------------------------
 void pv_checkConsignas(void)
 {
-static u16 cTimer = 300;
+static u16 cTimer = 300;	// 30s = 30 * 1s = 30 * 10ticks = 300 ticks ( 100ms c/u )
 RtcTimeType_t rtcDateTime;
 u16 now;
 
@@ -65,6 +65,7 @@ u16 now;
 
 	cTimer = 300;
 
+	// Si las consignas no estan configuradas, salgo
 	if ( systemVars.consigna.status == CONSIGNA_OFF )
 		return;
 
@@ -75,14 +76,14 @@ u16 now;
 	if ( now == systemVars.consigna.horaConsDia ) {
 		u_setConsignaDiurna();
 		snprintf_P( cons_printfBuff,sizeof(cons_printfBuff),PSTR("%s Set Consigna Diurna\r\n\0"), u_now() );
-		FreeRTOS_write( &pdUART1, cons_printfBuff, sizeof(cons_printfBuff) );
+		u_debugPrint(D_BASIC, cons_printfBuff, sizeof(cons_printfBuff) );
 		return;
 	}
 
 	if ( now == systemVars.consigna.horaConsNoc ) {
 		u_setConsignaNocturna();
 		snprintf_P( cons_printfBuff,sizeof(cons_printfBuff),PSTR("%s Set Consigna Nocturna\r\n\0"), u_now() );
-		FreeRTOS_write( &pdUART1, cons_printfBuff, sizeof(cons_printfBuff) );
+		u_debugPrint(D_BASIC, cons_printfBuff, sizeof(cons_printfBuff) );
 		return;
 	}
 
@@ -100,7 +101,7 @@ u16 now;
 
 	if ( systemVars.consigna.status == CONSIGNA_OFF ) {
 		snprintf_P( cons_printfBuff,sizeof(cons_printfBuff),PSTR("%s RELOAD: consignas OFF\r\n\0"), u_now() );
-		FreeRTOS_write( &pdUART1, cons_printfBuff, sizeof(cons_printfBuff) );
+		u_debugPrint(D_BASIC, cons_printfBuff, sizeof(cons_printfBuff) );
 		return;
 	}
 
@@ -112,21 +113,21 @@ u16 now;
 	if ( now <= systemVars.consigna.horaConsDia ) {
 		u_setConsignaNocturna();
 		snprintf_P( cons_printfBuff,sizeof(cons_printfBuff),PSTR("%s RELOAD:Set Consigna Nocturna\r\n\0"), u_now() );
-		FreeRTOS_write( &pdUART1, cons_printfBuff, sizeof(cons_printfBuff) );
+		u_debugPrint(D_BASIC, cons_printfBuff, sizeof(cons_printfBuff) );
 		return;
 	}
 
 	if ( ( now > systemVars.consigna.horaConsDia ) && ( now <= systemVars.consigna.horaConsNoc )) {
 		u_setConsignaDiurna();
 		snprintf_P( cons_printfBuff,sizeof(cons_printfBuff),PSTR("%s RELOAD:Set Consigna Diurna\r\n\0"), u_now() );
-		FreeRTOS_write( &pdUART1, cons_printfBuff, sizeof(cons_printfBuff) );
+		u_debugPrint(D_BASIC, cons_printfBuff, sizeof(cons_printfBuff) );
 		return;
 	}
 
 	if ( now > systemVars.consigna.horaConsNoc ) {
 		u_setConsignaNocturna();
 		snprintf_P( cons_printfBuff,sizeof(cons_printfBuff),PSTR("%s RELOAD:Set Consigna Nocturna\r\n\0"), u_now() );
-		FreeRTOS_write( &pdUART1, cons_printfBuff, sizeof(cons_printfBuff) );
+		u_debugPrint(D_BASIC, cons_printfBuff, sizeof(cons_printfBuff) );
 		return;
 	}
 

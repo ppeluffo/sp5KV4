@@ -101,6 +101,7 @@ uint32_t ulNotifiedValue;
 	for( ;; )
 	{
 
+		wdgStatus.analogCP = 1;
 		u_clearWdg(WDG_AIN);
 
 		// Espero hasta 100ms por un mensaje.
@@ -154,6 +155,8 @@ void pv_pollTimerCallback( TimerHandle_t pxTimer )
 	// Como el timer esta en reload c/1 sec, aqui contamos los secs para polear
 	// en la variable secs2poll.
 
+	wdgStatus.analogCP = 2;
+
 	AN_counters.secs2poll--;
 
 	if ( AN_counters.secs2poll <= 0 ) {	 	// programacion defensiva: uso <=
@@ -168,6 +171,7 @@ void pv_pollTimerCallback( TimerHandle_t pxTimer )
 			AN_counters.secs2poll = systemVars.timerPoll;
 			return;
 		}
+
 		// Default: sigo corriendo el timer pero no habilito a polear
 		AN_counters.secs2poll = systemVars.timerPoll;
 	}
@@ -179,6 +183,8 @@ static void pv_AINgetNextEvent(void)
 // Tenemos un array de eventos y todos se evaluan.
 
 u08 i;
+
+	wdgStatus.analogCP = 3;
 
 	// Inicializo la lista de eventos.
 	for ( i=0; i < dEVENT_COUNT; i++ ) {
@@ -209,6 +215,8 @@ static void pv_AINfsm(void)
 	// priorizar las transiciones.
 	// Luego de c/transicion debe venir un break así solo evaluo de a 1 transicion por loop.
 	//
+	wdgStatus.analogCP = 4;
+
 	switch ( tkAIN_state ) {
 	case tkdST_INIT:
 		tkAIN_state = trD00();	// TR00
@@ -250,6 +258,7 @@ static int trD00(void)
 	// Inicializo el sistema aqui
 	// tkdST_INIT->tkdST_STANDBY
 
+	wdgStatus.analogCP = 5;
 
 	// Init (load parameters) & start pollTimer
 	AN_flags.starting = FALSE;
@@ -273,6 +282,8 @@ static int trD01(void)
 {
 	// MSG de autoreload
 	// tkdST_STANDBY->tkdST_STANDBY
+
+	wdgStatus.analogCP = 6;
 
 	AN_flags.msgReload = FALSE;
 
@@ -298,6 +309,8 @@ static int trD02(void)
 {
 	// tkdST_STANDBY->tkdST_PWRSETTLE
 
+	wdgStatus.analogCP = 7;
+
 	AN_flags.start2poll = FALSE;
 	// Inicio el contador de segundos para que se estabilizen las fuentes.
 	AN_counters.secs2pwrSettle = SECS2PWRSETTLE;
@@ -316,6 +329,8 @@ static int trD03(void)
 	// tkdST_PWRSETTLE->tkdST_PWRSETTLE
 	// Espero 5s. que se estabilizen las fuentes.
 
+	wdgStatus.analogCP = 8;
+
 	if ( AN_counters.secs2pwrSettle > 0 ) {
 		vTaskDelay( ( TickType_t)( 1000 / portTICK_RATE_MS ) );
 		AN_counters.secs2pwrSettle--;
@@ -328,6 +343,8 @@ static int trD03(void)
 static int trD04(void)
 {
 	// tkdST_PWRSETTLE->tkdST_POLLING
+
+	wdgStatus.analogCP = 9;
 
 	AN_counters.nroPoleos = CICLOS_POLEO;
 
@@ -350,6 +367,8 @@ static int trD05(void)
 	// Poleo
 
 u16 adcRetValue;
+
+	wdgStatus.analogCP = 10;
 
 	// Dummy convert para prender el ADC ( estabiliza la medida).
 	ADS7827_readCh0( &adcRetValue);
@@ -401,6 +420,8 @@ u16 pos = 0;
 size_t bWrite;
 StatBuffer_t pxFFStatBuffer;
 
+	wdgStatus.analogCP = 11;
+
 	//  En modo discreto debo apagar sensores
 	if ( (systemVars.pwrMode == PWR_DISCRETO ) && ( systemVars.wrkMode == WK_NORMAL )) {
 		MCP_setSensorPwr( 0 );
@@ -414,7 +435,7 @@ StatBuffer_t pxFFStatBuffer;
 	for ( channel = 0; channel < (NRO_CHANNELS + 1); channel++) {
 		rAIn[channel] /= CICLOS_POLEO;
 		tickCount = xTaskGetTickCount();
-		snprintf_P( aIn_printfBuff,CHAR128,PSTR(".[%06lu] tkAnalogIn::trD06 AvgCh[%d]=%.1f\r\n\0"), tickCount, channel, rAIn[channel]);
+		snprintf_P( aIn_printfBuff,CHAR128,PSTR(".[%06lu] tkAnalogIn::trD06 AvgCh[%d]=%.02f\r\n\0"), tickCount, channel, rAIn[channel]);
 		u_debugPrint(D_DATA, aIn_printfBuff, sizeof(aIn_printfBuff) );
 	}
 
@@ -451,7 +472,7 @@ StatBuffer_t pxFFStatBuffer;
 	// Valores analogicos
 	for ( channel = 0; channel < NRO_CHANNELS; channel++) {
 		Aframe.analogIn[channel] = rAIn[channel];
-		pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR("%s=%.2f,"),systemVars.aChName[channel],Aframe.analogIn[channel] );
+		pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR("%s=%.02f,"),systemVars.aChName[channel],Aframe.analogIn[channel] );
 	}
 
 	// Leo los datos digitales y los pongo en 0.
@@ -459,12 +480,12 @@ StatBuffer_t pxFFStatBuffer;
 	// Convierto los pulsos a los valores de la magnitud.
 	Aframe.dIn.pulses[0] *=  systemVars.magPP[0];
 	Aframe.dIn.pulses[1] *=  systemVars.magPP[1];
-	pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR("%sP=%.2f,%sL=%d,"), systemVars.dChName[0],Aframe.dIn.pulses[0],systemVars.dChName[0],Aframe.dIn.level[0],systemVars.dChName[0]);
-	pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR("%sP=%.2f,%sL=%d"), systemVars.dChName[1],Aframe.dIn.pulses[1],systemVars.dChName[1],Aframe.dIn.level[1],systemVars.dChName[1]);
+	pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR("%sP=%.02f,%sL=%d,"), systemVars.dChName[0],Aframe.dIn.pulses[0],systemVars.dChName[0],Aframe.dIn.level[0],systemVars.dChName[0]);
+	pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR("%sP=%.02f,%sL=%d"), systemVars.dChName[1],Aframe.dIn.pulses[1],systemVars.dChName[1],Aframe.dIn.level[1],systemVars.dChName[1]);
 
 	// Bateria
 	Aframe.batt = rAIn[3];
-	pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR(",bt=%.2f}\0"),Aframe.batt );
+	pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR(",bt=%.02f}\0"),Aframe.batt );
 
 	xSemaphoreGive( sem_SYSVars );
 
@@ -509,6 +530,8 @@ quit:
 /*------------------------------------------------------------------------------------*/
 static void pv_AINprintExitMsg(u08 code)
 {
+	wdgStatus.analogCP = 12;
+
 	tickCount = xTaskGetTickCount();
 	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::exit TR%02d\r\n\0"), tickCount,code);
 	u_debugPrint(D_DATA, aIn_printfBuff, sizeof(aIn_printfBuff) );
@@ -518,6 +541,8 @@ static void pv_AinLoadParameters( void )
 {
 	// Dependiendo del modo de trabajo normal, service, idle, monitor, setea el
 	// timer de poleo.
+
+	wdgStatus.analogCP = 13;
 
 	// Al comienzo poleo rapido aunque luego no lo salvo
 	if ( AN_flags.firstPoll == TRUE ) {
@@ -540,6 +565,8 @@ s16 u_readTimeToNextPoll(void)
 {
 s16 retVal = -1;
 
+	wdgStatus.analogCP = 14;
+
 	// Lo determina en base al time elapsed y el timerPoll.
 	// El -1 indica un modo en que no esta poleando.
 	if ( ( systemVars.wrkMode == WK_NORMAL ) || ( systemVars.wrkMode == WK_MONITOR_FRAME )) {
@@ -551,6 +578,8 @@ s16 retVal = -1;
 /*------------------------------------------------------------------------------------*/
 void u_readAnalogFrame (frameData_t *dFrame)
 {
+	wdgStatus.analogCP = 15;
+
 	memcpy(dFrame, &Aframe, sizeof(Aframe) );
 }
 /*------------------------------------------------------------------------------------*/

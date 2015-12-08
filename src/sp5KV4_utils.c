@@ -204,7 +204,6 @@ s08 u_saveSystemParams(void)
 	// Salva el systemVars en la EE y verifica que halla quedado bien.
 	// Hago hasta 3 intentos.
 
-int EEaddr = 0; // posicion inicial
 s08 retS = FALSE;
 u08 storeChecksum = 0;
 u08 loadChecksum = 0;
@@ -214,10 +213,10 @@ u08 i;
 		taskYIELD();
 
 	for ( i=0; i<3; i++ ) {
-		storeChecksum = pv_paramStore( &systemVars, EEaddr, sizeof(systemVarsType));
+		storeChecksum = pv_paramStore( (u08 *)&systemVars, (uint8_t *)EEADDR_SV, sizeof(systemVarsType));
 		vTaskDelay( ( TickType_t)( 100 / portTICK_RATE_MS ) );
-		pv_paramLoad( &tmpSV, EEaddr, sizeof(systemVarsType));
-		loadChecksum = pv_checkSum(&tmpSV,sizeof(systemVarsType));
+		pv_paramLoad( (u08 *)&tmpSV, (uint8_t *)EEADDR_SV, sizeof(systemVarsType));
+		loadChecksum = pv_checkSum( (u08 *)&tmpSV,sizeof(systemVarsType));
 
 		if ( loadChecksum == storeChecksum ) {
 			retS = TRUE;
@@ -233,12 +232,12 @@ u08 i;
 s08 u_loadSystemParams(void)
 {
 s08 retS = FALSE;
-int EEaddr = 0; // posicion inicial
 int i;
+
 	// Leo la configuracion:  Intento leer hasta 3 veces.
 
 	for ( i=0; i<3;i++) {
-		retS = pv_paramLoad( &systemVars, EEaddr, sizeof(systemVarsType));
+		retS =  pv_paramLoad( (u08 *)&systemVars, (uint8_t *)EEADDR_SV, sizeof(systemVarsType));
 		if ( retS )
 			break;
 	}
@@ -249,7 +248,7 @@ int i;
 	systemVars.dbm = 0;
 	systemVars.dcd = 0;
 	systemVars.ri = 0;
-	systemVars.debugLevel = D_BASIC;
+	//systemVars.debugLevel = D_BASIC;
 	systemVars.wrkMode = WK_NORMAL;
 
 	// Cuando arranca si la EE no esta inicializada puede dar cualquier cosa.
@@ -281,9 +280,9 @@ u08 checksum_stored=0;
 u08 checksum=0;
 
 	// load parameters
-	eeprom_read_block(data, addr, sizebytes);
+	eeprom_read_block(data, (uint8_t *)addr, sizebytes);
 	// load checksum
-	eeprom_read_block(&checksum_stored, addr+sizebytes, sizeof(u08));
+	eeprom_read_block(&checksum_stored, (uint8_t *)(addr+sizebytes), sizeof(u08));
 
 	// calculate own checksum
 	for(i=0;i<sizebytes;i++)
@@ -311,6 +310,7 @@ u16 tpoll;
 
 	return(TRUE);
 }
+//------------------------------------------------------------------------------------
 u08 pv_paramStore(u08* data, u08* addr, u16 sizebytes)
 {
 	// Almacena un string de bytes en la eeprom interna del micro
@@ -324,9 +324,9 @@ u08 checksum=0;
 	checksum = ~checksum;
 
 	// store parameters
-	eeprom_write_block(data, addr, sizebytes);
+	 eeprom_write_block(data, (uint8_t *)addr, sizebytes);
 	// store checksum
-	eeprom_write_block(&checksum, addr+sizebytes, sizeof(u08));
+	eeprom_write_block(&checksum, (uint8_t *)(addr+sizebytes), sizeof(u08));
 
 	return(checksum);
 }
