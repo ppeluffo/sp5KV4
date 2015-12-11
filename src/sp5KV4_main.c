@@ -12,6 +12,9 @@
  * un problema, la interrupcion guarda el estado y luego se resetea.
  * Al arrancar, leo el estado y lo trasmito.
  *
+ * Agrego en la funcion de espera de I2C un timeout de modo que salgo con FALSE y eso hace
+ * que el resto de las funciones indique un error.
+ * Esto en ppio. podria evitar un error de reset por wdg.
  *
  * ----------------------------------------------------------------------------------------------------------------
  */

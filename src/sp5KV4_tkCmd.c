@@ -1226,7 +1226,7 @@ void pv_cmdRdADC(void)
 	// channel: argv[2]
 
 s08 retS = FALSE;
-u16 adcRetValue;
+u16 adcRetValue = 9999;
 
 	switch(atoi(argv[2])) {
 	case 0:

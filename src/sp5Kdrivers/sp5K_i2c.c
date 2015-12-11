@@ -373,6 +373,7 @@ inline u08 pvI2C_getStatus(void)
 //------------------------------------------------------------------------------------
 inline s08 pvI2C_waitForComplete(void)
 {
+TickType_t xTicksToWait = 3;		// 3 ticks ( 30ms es el maximo tiempo que espero )
 TimeOut_t xTimeOut;
 
 	// inicializo el timeout
@@ -380,14 +381,13 @@ TimeOut_t xTimeOut;
 
 	// wait for i2c interface to complete operation
 	while( !(TWCR & (1<<TWINT)) )
-		;
-//	{
-//		taskYIELD();
-//		if( xTaskCheckForTimeOut( &xTimeOut, &xTicksToWait ) != pdFALSE ) {
-			/* Timed out before the wanted number of bytes were available, exit the loop. */
-//			return(FALSE);
-//		}
-//	}
+	{
+		if( xTaskCheckForTimeOut( &xTimeOut, &xTicksToWait ) != pdFALSE ) {
+			// Timed out
+			return(FALSE);
+		}
+	}
+
 	return(TRUE);
 }
 //------------------------------------------------------------------------------------

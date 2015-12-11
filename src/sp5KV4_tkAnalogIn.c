@@ -11,6 +11,8 @@
 static char aIn_printfBuff[CHAR256];
 TimerHandle_t pollingTimer;
 
+static u08 rdErrors;
+
 // Estados
 typedef enum {	tkdST_INIT 		= 0,
 				tkdST_STANDBY	= 1,
@@ -55,6 +57,7 @@ static struct {
 
 #define CICLOS_POLEO		3		// ciclos de poleo para promediar.
 #define SECS2PWRSETTLE 		5
+#define MAX_ERRORS			180		// maximo nro.poleos con error para resetear el micro.
 
 static struct {
 	u08 secs2pwrSettle;		// contador de segundos para que se estabilize la fuente
@@ -93,6 +96,8 @@ uint32_t ulNotifiedValue;
 	AN_counters.secs2poll = 15;
 	AN_counters.secs2pwrSettle = SECS2PWRSETTLE;
 
+	rdErrors = 0;
+
 	// Arranco el timer de poleo.
 	if ( xTimerStart( pollingTimer, 0 ) != pdPASS )
 		u_panic(P_AIN_TIMERSTART);
@@ -125,6 +130,10 @@ uint32_t ulNotifiedValue;
 		// Corro la maquina de estados.
 		pv_AINfsm();
 
+		if ( rdErrors >= MAX_ERRORS ) {
+			wdt_enable(WDTO_30MS);
+			while(1) {}
+		}
 	}
 
 }
@@ -266,8 +275,14 @@ static int trD00(void)
 	pv_AinLoadParameters();
 
 	// Apagar los sensores.
-	MCP_setSensorPwr( 0 );
-	MCP_setAnalogPwr( 0 );
+	if ( ! MCP_setSensorPwr( 0 ) ) {
+		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD00 pwroff sensors ERROR !!\r\n\0"), tickCount);
+		u_debugPrint(D_BASIC, aIn_printfBuff, sizeof(aIn_printfBuff) );
+	}
+	if ( ! MCP_setAnalogPwr( 0 ) ) {
+		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD00 pwroff analogPwr ERROR !!\r\n\0"), tickCount);
+		u_debugPrint(D_BASIC, aIn_printfBuff, sizeof(aIn_printfBuff) );
+	}
 
 	tickCount = xTaskGetTickCount();
 	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD00 pwroff sensors\r\n\0"), tickCount);
@@ -294,8 +309,15 @@ static int trD01(void)
 	AN_counters.secs2poll = 15;
 
 	// Apagar los sensores.
-	MCP_setSensorPwr( 0 );
-	MCP_setAnalogPwr( 0 );
+	if ( ! MCP_setSensorPwr( 0 ) ) {
+		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD01 pwroff sensors ERROR !!\r\n\0"), tickCount);
+		u_debugPrint(D_BASIC, aIn_printfBuff, sizeof(aIn_printfBuff) );
+	}
+	if ( ! MCP_setAnalogPwr( 0 ) ) {
+		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD01 pwroff analogPwr ERROR !!\r\n\0"), tickCount);
+		u_debugPrint(D_BASIC, aIn_printfBuff, sizeof(aIn_printfBuff) );
+	}
+
 	tickCount = xTaskGetTickCount();
 	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD01 pwroff sensors\r\n\0"), tickCount);
 
@@ -317,8 +339,15 @@ static int trD02(void)
 
 	// Siempre prendo las fuentes. Si estoy en modo continuo ya van a estar prendidas
 	// por lo que no hace nada.
-	MCP_setSensorPwr( 1 );
-	MCP_setAnalogPwr( 1 );
+	if ( ! MCP_setSensorPwr( 1 ) ) {
+		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD02 pwrOn sensors ERROR !!\r\n\0"), tickCount);
+		u_debugPrint(D_BASIC, aIn_printfBuff, sizeof(aIn_printfBuff) );
+	}
+	if ( ! MCP_setAnalogPwr( 1 ) ) {
+		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD02 pwrOn analogPwr ERROR !!\r\n\0"), tickCount);
+		u_debugPrint(D_BASIC, aIn_printfBuff, sizeof(aIn_printfBuff) );
+	}
+
 
 	pv_AINprintExitMsg(2);
 	return(tkdST_PWRSETTLE);
@@ -367,11 +396,19 @@ static int trD05(void)
 	// Poleo
 
 u16 adcRetValue;
+s08 retS;
 
 	wdgStatus.analogCP = 10;
 
 	// Dummy convert para prender el ADC ( estabiliza la medida).
-	ADS7827_readCh0( &adcRetValue);
+	tickCount = xTaskGetTickCount();
+	retS = ADS7827_readCh0( &adcRetValue);
+	if ( !retS ) {
+		rdErrors++;
+		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD05 Dummy ERROR !!\r\n\0"), tickCount);
+		u_debugPrint(D_BASIC, aIn_printfBuff, sizeof(aIn_printfBuff) );
+	}
+
 	if ( AN_counters.nroPoleos > 0 ) {
 		vTaskDelay( ( TickType_t)( 1000 / portTICK_RATE_MS ) );
 		AN_counters.nroPoleos--;
@@ -384,22 +421,42 @@ u16 adcRetValue;
 	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD05:\r\n\0"), tickCount);
 	u_debugPrint(D_DATA, aIn_printfBuff, sizeof(aIn_printfBuff) );
 
-	ADS7827_readCh0( &adcRetValue);	// AIN0->ADC3;
+	retS = ADS7827_readCh0( &adcRetValue);	// AIN0->ADC3;
+	if ( !retS ) {
+		rdErrors++;
+		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD05 CH0 ERROR !!\r\n\0"), tickCount);
+		u_debugPrint(D_BASIC, aIn_printfBuff, sizeof(aIn_printfBuff) );
+	}
 	rAIn[0] += adcRetValue;
 	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("\tch_0,adc_3,val=%d,r0=%.0f\r\n\0"),adcRetValue, rAIn[0]);
 	u_debugPrint(D_DATA, aIn_printfBuff, sizeof(aIn_printfBuff) );
 
-	ADS7827_readCh1( &adcRetValue); // AIN1->ADC5;
+	retS = ADS7827_readCh1( &adcRetValue); // AIN1->ADC5;
+	if ( !retS ) {
+		rdErrors++;
+		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD05 CH1 ERROR !!\r\n\0"), tickCount);
+		u_debugPrint(D_BASIC, aIn_printfBuff, sizeof(aIn_printfBuff) );
+	}
 	rAIn[1] += adcRetValue;
 	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("\tch_1,adc_5,val=%d,r1=%.0f\r\n\0"),adcRetValue, rAIn[1]);
 	u_debugPrint(D_DATA, aIn_printfBuff, sizeof(aIn_printfBuff) );
 
-	ADS7827_readCh2( &adcRetValue); // AIN2->ADC7;
+	retS = ADS7827_readCh2( &adcRetValue); // AIN2->ADC7;
+	if ( !retS ) {
+		rdErrors++;
+		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD05 CH2 ERROR !!\r\n\0"), tickCount);
+		u_debugPrint(D_BASIC, aIn_printfBuff, sizeof(aIn_printfBuff) );
+	}
 	rAIn[2] += adcRetValue;
 	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("\tch_2,adc_7,val=%d,r1=%.0f\r\n\0"), adcRetValue, rAIn[2]);
 	u_debugPrint(D_DATA, aIn_printfBuff, sizeof(aIn_printfBuff) );
 
-	ADS7827_readBatt( &adcRetValue); // BATT->ADC1;
+	retS = ADS7827_readBatt( &adcRetValue); // BATT->ADC1;
+	if ( !retS ) {
+		rdErrors++;
+		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD05 Batt ERROR !!\r\n\0"), tickCount);
+		u_debugPrint(D_BASIC, aIn_printfBuff, sizeof(aIn_printfBuff) );
+	}
 	rAIn[3] += adcRetValue;
 	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("\tch_3,adc_1,val=%d,r1=%.0f\r\n\0"), adcRetValue, rAIn[3]);
 	u_debugPrint(D_DATA, aIn_printfBuff, sizeof(aIn_printfBuff) );
@@ -424,8 +481,15 @@ StatBuffer_t pxFFStatBuffer;
 
 	//  En modo discreto debo apagar sensores
 	if ( (systemVars.pwrMode == PWR_DISCRETO ) && ( systemVars.wrkMode == WK_NORMAL )) {
-		MCP_setSensorPwr( 0 );
-		MCP_setAnalogPwr( 0 );
+		if ( ! MCP_setSensorPwr( 0 ) ) {
+			snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD06 pwroff sensors ERROR !!\r\n\0"), tickCount);
+			u_debugPrint(D_BASIC, aIn_printfBuff, sizeof(aIn_printfBuff) );
+		}
+		if ( ! MCP_setAnalogPwr( 0 ) ) {
+			snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD06 pwroff analogPwr ERROR !!\r\n\0"), tickCount);
+			u_debugPrint(D_BASIC, aIn_printfBuff, sizeof(aIn_printfBuff) );
+		}
+
 		tickCount = xTaskGetTickCount();
 		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD06 pwroff sensors\r\n\0"), tickCount);
 		u_debugPrint(D_DATA, aIn_printfBuff, sizeof(aIn_printfBuff) );

@@ -502,10 +502,21 @@ static void gTR_reloadConfig(void)
 
 	// Apago el modem y dejo
 	// activo el pwr del modem para que no consuma
-	MODEM_HWpwrOff();
-	MODEM_SWswitchHIGH();
+	if ( ! MODEM_HWpwrOff() ) {
+		snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR(".[%06lu] tkGprs::ReloadConf pwrOff modem ERROR !!\r\n\0"), tickCount);
+		u_debugPrint(D_BASIC, gprs_printfBuff, sizeof(gprs_printfBuff) );
+	}
+
+	if ( ! MODEM_SWswitchHIGH() ) {
+		snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR(".[%06lu] tkGprs::ReloadConf sw H modem ERROR !!\r\n\0"), tickCount);
+		u_debugPrint(D_BASIC, gprs_printfBuff, sizeof(gprs_printfBuff) );
+	}
 	vTaskDelay( (portTickType)( 500 / portTICK_RATE_MS ) );
-	MODEM_HWpwrOn();
+
+	if ( ! MODEM_HWpwrOn() ) {
+		snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR(".[%06lu] tkGprs::ReloadConf pwrOn modem ERROR !!\r\n\0"), tickCount);
+		u_debugPrint(D_BASIC, gprs_printfBuff, sizeof(gprs_printfBuff) );
+	}
 
 	vTaskDelay( (portTickType)( 500 / portTICK_RATE_MS ) );
 	strncpy_P(systemVars.dlgIp, PSTR("000.000.000.000\0"),16);
@@ -612,10 +623,19 @@ static int gTR_o00(void)
 
 	// Apago el modem y dejo
 	// activo el pwr del modem para que no consuma
-	MODEM_HWpwrOff();
-	MODEM_SWswitchHIGH();
+	if ( ! MODEM_HWpwrOff() ) {
+		snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR(".[%06lu] tkGprs::o00 pwrOff modem ERROR !!\r\n\0"), tickCount);
+		u_debugPrint(D_BASIC, gprs_printfBuff, sizeof(gprs_printfBuff) );
+	}
+	if ( ! MODEM_SWswitchHIGH() ) {
+		snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR(".[%06lu] tkGprs::o00 sw H modem ERROR !!\r\n\0"), tickCount);
+		u_debugPrint(D_BASIC, gprs_printfBuff, sizeof(gprs_printfBuff) );
+	}
 	vTaskDelay( (portTickType)( 500 / portTICK_RATE_MS ) );
-	MODEM_HWpwrOn();
+	if ( ! MODEM_HWpwrOn() ) {
+		snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR(".[%06lu] tkGprs::o00 pwrOn modem ERROR !!\r\n\0"), tickCount);
+		u_debugPrint(D_BASIC, gprs_printfBuff, sizeof(gprs_printfBuff) );
+	}
 
 	vTaskDelay( (portTickType)( 500 / portTICK_RATE_MS ) );
 	strncpy_P(systemVars.dlgIp, PSTR("000.000.000.000\0"),16);
@@ -691,10 +711,19 @@ static int gTR_o03(void)
 	// gSST_OFF_prenderModem_01 -> gSST_OFF_prenderModem_02
 	// Prendo el modem HW y espero estabilizar la fuente
 
-	MODEM_HWpwrOff();
-	MODEM_SWswitchHIGH();
+	if ( ! MODEM_HWpwrOff() ) {
+		snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR(".[%06lu] tkGprs::o03 pwrOff modem ERROR !!\r\n\0"), tickCount);
+		u_debugPrint(D_BASIC, gprs_printfBuff, sizeof(gprs_printfBuff) );
+	}
+	if ( ! MODEM_SWswitchHIGH() ) {
+		snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR(".[%06lu] tkGprs::o03 sw H modem ERROR !!\r\n\0"), tickCount);
+		u_debugPrint(D_BASIC, gprs_printfBuff, sizeof(gprs_printfBuff) );
+	}
 	vTaskDelay( (portTickType)( 500 / portTICK_RATE_MS ) );
-	MODEM_HWpwrOn();
+	if ( ! MODEM_HWpwrOn() ) {
+		snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR(".[%06lu] tkGprs::o03 pwrOn modem ERROR !!\r\n\0"), tickCount);
+		u_debugPrint(D_BASIC, gprs_printfBuff, sizeof(gprs_printfBuff) );
+	}
 	vTaskDelay( (portTickType)( 1000 / portTICK_RATE_MS ) );
 
 	// Voy a reintentar 3 veces de prender el modem HW
@@ -713,9 +742,15 @@ static int gTR_o04(void)
 	GPRS_counters.cTimer = 5;		// espera en c/intento de settle time
 
 	// switch on/off: aplico un pulso HIGH->LOW->HIGH
-	MODEM_SWswitchLOW();
+	if ( ! MODEM_SWswitchLOW() ) {
+		snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR(".[%06lu] tkGprs::o04 sw H modem ERROR !!\r\n\0"), tickCount);
+		u_debugPrint(D_BASIC, gprs_printfBuff, sizeof(gprs_printfBuff) );
+	}
 	vTaskDelay( (portTickType)( 500 / portTICK_RATE_MS ) );
-	MODEM_SWswitchHIGH();
+	if ( ! MODEM_SWswitchHIGH() ) {
+		snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR(".[%06lu] tkGprs::o04 sw H modem ERROR !!\r\n\0"), tickCount);
+		u_debugPrint(D_BASIC, gprs_printfBuff, sizeof(gprs_printfBuff) );
+	}
 
 	tickCount = xTaskGetTickCount();
 	snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR(".[%06lu] tkGprs: switch on/off [%d][%d]\r\n\0"), tickCount,GPRS_counters.qTryes,GPRS_counters.pTryes);
@@ -2388,7 +2423,9 @@ StatBuffer_t pxFFStatBuffer;
 
 	// Leo memoria
 	FF_fread( &Aframe, sizeof(Aframe));
+	FF_stat(&pxFFStatBuffer);
 
+	// Siempre trasmito los datos aunque vengan papasfritas.
 	// Armo el frame
 	memset( gprs_printfBuff, '\0', sizeof(gprs_printfBuff));
 	pos = snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("&CTL=%d"), pxFFStatBuffer.RD );
@@ -2407,11 +2444,14 @@ StatBuffer_t pxFFStatBuffer;
 	pos += snprintf_P( &gprs_printfBuff[pos],( sizeof(gprs_printfBuff) - pos ), PSTR("bt>%.2f"),Aframe.batt );
 	// Trasmito por el modem.
 	FreeRTOS_write( &pdUART0, gprs_printfBuff, pos );
-	FF_stat(&pxFFStatBuffer);
 
 	// Imprimo
 	// agrego mem.stats
-	pos = snprintf_P( &gprs_printfBuff[pos], ( sizeof(gprs_printfBuff) - pos ), PSTR(" MEM(%d) [%d/%d/%d][%d/%d]\r\n\0"), GPRS_counters.txRcdsInWindow, pxFFStatBuffer.HEAD,pxFFStatBuffer.RD, pxFFStatBuffer.TAIL,pxFFStatBuffer.rcdsFree,pxFFStatBuffer.rcds4del);
+	if (pxFFStatBuffer.errno > 0 ) {
+		pos = snprintf_P( &gprs_printfBuff[pos], ( sizeof(gprs_printfBuff) - pos ), PSTR(" ERROR (%d) MEM(%d) [%d/%d/%d][%d/%d]\r\n\0"), pxFFStatBuffer.errno, GPRS_counters.txRcdsInWindow, pxFFStatBuffer.HEAD,pxFFStatBuffer.RD, pxFFStatBuffer.TAIL,pxFFStatBuffer.rcdsFree,pxFFStatBuffer.rcds4del);
+	} else {
+		pos = snprintf_P( &gprs_printfBuff[pos], ( sizeof(gprs_printfBuff) - pos ), PSTR(" MEM(%d) [%d/%d/%d][%d/%d]\r\n\0"), GPRS_counters.txRcdsInWindow, pxFFStatBuffer.HEAD,pxFFStatBuffer.RD, pxFFStatBuffer.TAIL,pxFFStatBuffer.rcdsFree,pxFFStatBuffer.rcds4del);
+	}
 	FreeRTOS_write( &pdUART1, "TX->{\0", sizeof("TX->{\0") );
 	FreeRTOS_write( &pdUART1, gprs_printfBuff, sizeof(gprs_printfBuff) );
 
