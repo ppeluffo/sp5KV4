@@ -353,7 +353,7 @@ u08 channel;
 		taskYIELD();
 
 	systemVars.initByte = 0x49;
-	strncpy_P(systemVars.dlgId, PSTR("DEF401\0"),DLGID_LENGTH);
+	strncpy_P(systemVars.dlgId, PSTR("DEF400\0"),DLGID_LENGTH);
 	strncpy_P(systemVars.serverPort, PSTR("80\0"),PORT_LENGTH	);
 	strncpy_P(systemVars.passwd, PSTR("spymovil123\0"),PASSWD_LENGTH);
 	strncpy_P(systemVars.serverScript, PSTR("/cgi-bin/sp5K/sp5K.pl\0"),SCRIPT_LENGTH);

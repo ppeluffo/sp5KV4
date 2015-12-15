@@ -57,7 +57,7 @@ static struct {
 
 #define CICLOS_POLEO		3		// ciclos de poleo para promediar.
 #define SECS2PWRSETTLE 		5
-#define MAX_ERRORS			180		// maximo nro.poleos con error para resetear el micro.
+#define MAX_ERRORS			90		// maximo nro.poleos con error para resetear el micro.( equivale a 30 mins. )
 
 static struct {
 	u08 secs2pwrSettle;		// contador de segundos para que se estabilize la fuente
@@ -131,6 +131,8 @@ uint32_t ulNotifiedValue;
 		pv_AINfsm();
 
 		if ( rdErrors >= MAX_ERRORS ) {
+			snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("%s Reset por I2C errors !!!\r\n\0"), u_now() );
+			u_debugPrint(D_BASIC, aIn_printfBuff, sizeof(aIn_printfBuff) );
 			wdt_enable(WDTO_30MS);
 			while(1) {}
 		}
