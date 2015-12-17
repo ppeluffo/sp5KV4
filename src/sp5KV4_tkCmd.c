@@ -759,12 +759,12 @@ u08 argc;
 
 	// CONSIGNA
 	// consigna {on|off} hhmm1,hhmm2,ch1,ch2
-	if (!strcmp_P( strupr(argv[1]), PSTR("CONSIGNA\0"))) {
-		if (!strcmp_P( strupr(argv[2]), PSTR("ON"))) { u_configConsignas( CONSIGNA_ON,argv[3],argv[4], argv[5],argv[6]); }
-		if (!strcmp_P( strupr(argv[2]), PSTR("OFF"))) { u_configConsignas( CONSIGNA_OFF,argv[3],argv[4], argv[5],argv[6]); }
-		pv_snprintfP_OK();
-		return;
-	}
+//	if (!strcmp_P( strupr(argv[1]), PSTR("CONSIGNA\0"))) {
+	//	if (!strcmp_P( strupr(argv[2]), PSTR("ON"))) { u_configConsignas( CONSIGNA_ON,argv[3],argv[4], argv[5],argv[6]); }
+	//	if (!strcmp_P( strupr(argv[2]), PSTR("OFF"))) { u_configConsignas( CONSIGNA_OFF,argv[3],argv[4], argv[5],argv[6]); }
+//		pv_snprintfP_OK();
+//		return;
+//	}
 
 	//----------------------------------------------------------------------
 	// COMANDOS USADOS PARA DIAGNOSTICO

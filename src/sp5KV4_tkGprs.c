@@ -1744,10 +1744,19 @@ static int gTR_k16(void)
 	// gSST_ONopenSocket_08 -> gSST_OFF
 	// El socket no se cerro.
 
-	tkGprs_state = gST_OFF;
+//	tkGprs_state = gST_OFF;
+
+//	pv_GPRSprintExitMsg("k16\0");
+//	return(gSST_OFF_Entry);
+
+	// ASUMO QUE EL SOCKET CERRO E INTENTO REABRILO
+
+	// gSST_ONopenSocket_01 -> gSST_ONopenSocket_02
+	// Abro el socket
 
 	pv_GPRSprintExitMsg("k16\0");
-	return(gSST_OFF_Entry);
+	return(gSST_ONopenSocket_02);
+
 }
 //------------------------------------------------------------------------------------
 static int gTR_k17(void)
@@ -1913,7 +1922,7 @@ u08 i;
 	pos += snprintf_P( &gprs_printfBuff[pos],( sizeof(gprs_printfBuff) - pos ),PSTR("&D0=%s,%.02f"),systemVars.dChName[0],systemVars.magPP[0]);
 	pos += snprintf_P( &gprs_printfBuff[pos],( sizeof(gprs_printfBuff) - pos ),PSTR("&D1=%s,%.02f"),systemVars.dChName[1],systemVars.magPP[1]);
 	// Configuracion de salidas
-	pos += snprintf_P( &gprs_printfBuff[pos],( CHAR256 - pos ),PSTR("&CONS=%d,%d,%d,%d,%d\0"),systemVars.consigna.status,u_convertMINS2hhmm(systemVars.consigna.horaConsDia),u_convertMINS2hhmm(systemVars.consigna.horaConsNoc),systemVars.consigna.chVA, systemVars.consigna.chVB);
+//	pos += snprintf_P( &gprs_printfBuff[pos],( CHAR256 - pos ),PSTR("&CONS=%d,%d,%d,%d,%d\0"),systemVars.consigna.status,u_convertMINS2hhmm(systemVars.consigna.horaConsDia),u_convertMINS2hhmm(systemVars.consigna.horaConsNoc),systemVars.consigna.chVA, systemVars.consigna.chVB);
 	// Reset status
 	pos += snprintf_P( &gprs_printfBuff[pos],( CHAR256 - pos ),PSTR("&WDG=%d\0"),wdgStatus.resetCause );
 	// GPRS sent
@@ -2010,7 +2019,7 @@ u08 saveFlag = 0;
 	saveFlag += pv_GPRSprocessDch(0);
 	saveFlag += pv_GPRSprocessDch(1);
 	// Consignas
-	saveFlag += pv_GPRSprocessConsignas();
+//	saveFlag += pv_GPRSprocessConsignas();
 
 	if ( saveFlag > 0 ) {
 		if ( u_saveSystemParams() ) {
