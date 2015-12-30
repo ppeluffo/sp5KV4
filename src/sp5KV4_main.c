@@ -1,6 +1,4 @@
 /*
- * Revisar porque al reinicializar el fifo, ya no veo los comandos ingresados.
- * Como afecta esto a la busqueda.
  *
  * git commit -a -m "beta 473293390 001"
  * git remote add REM_SP5KV4 https://github.com/ppeluffo/sp5KV4.git
@@ -15,6 +13,8 @@
  * Agrego en la funcion de espera de I2C un timeout de modo que salgo con FALSE y eso hace
  * que el resto de las funciones indique un error.
  * Esto en ppio. podria evitar un error de reset por wdg.
+ *
+ * !! Agregar el salir automaticamente luego de 30 mins del modo service.
  *
  * ----------------------------------------------------------------------------------------------------------------
  */
@@ -85,6 +85,7 @@ unsigned int i,j;
 	xTaskCreate(tkAnalogIn, "AIN", tkAIn_STACK_SIZE, NULL, tkAIn_TASK_PRIORITY,  &xHandle_tkAIn);
 	xTaskCreate(tkGprs, "GPRS", tkGprs_STACK_SIZE, NULL, tkGprs_TASK_PRIORITY,  &xHandle_tkGprs);
 	xTaskCreate(tkConsignas, "CONS", tkCons_STACK_SIZE, NULL, tkCons_TASK_PRIORITY,  &xHandle_tkConsignas);
+	xTaskCreate(tkGprsRx, "GPRSRX", tkGprsRx_STACK_SIZE, NULL, tkGprsRx_TASK_PRIORITY,  &xHandle_tkGprsRx);
 
 	/* Arranco el RTOS. */
 	vTaskStartScheduler();

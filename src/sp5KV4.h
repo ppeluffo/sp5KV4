@@ -54,8 +54,8 @@
 
 // DEFINICION DEL TIPO DE SISTEMA
 //----------------------------------------------------------------------------
-#define SP5K_REV "4.0.4"
-#define SP5K_DATE "@ 20151216"
+#define SP5K_REV "4.0.6"
+#define SP5K_DATE "@ 20151230"
 
 #define SP5K_MODELO "sp5KV3 HW:avr1284P R5.0"
 #define SP5K_VERSION "FW:FRTOS8"
@@ -73,6 +73,7 @@
 #define tkAIn_STACK_SIZE		512
 #define tkGprs_STACK_SIZE		512
 #define tkCons_STACK_SIZE		512
+#define tkGprsRx_STACK_SIZE		512
 
 /* Prioridades de las tareas */
 #define tkCmd_TASK_PRIORITY	 		( tskIDLE_PRIORITY + 1 )
@@ -81,6 +82,7 @@
 #define tkAIn_TASK_PRIORITY 		( tskIDLE_PRIORITY + 1 )
 #define tkGprs_TASK_PRIORITY 		( tskIDLE_PRIORITY + 1 )
 #define tkCons_TASK_PRIORITY 		( tskIDLE_PRIORITY + 1 )
+#define tkGprsRx_TASK_PRIORITY 		( tskIDLE_PRIORITY + 1 )
 
 /* Prototipos de tareas */
 void tkCmd(void * pvParameters);
@@ -92,8 +94,9 @@ void tkAnalogInit(void);
 void tkGprs(void * pvParameters);
 void tkGprsInit(void);
 void tkConsignas(void * pvParameters);
+void tkGprsRx(void * pvParameters);
 
-TaskHandle_t xHandle_tkCmd, xHandle_tkControl, xHandle_tkDigitalIn, xHandle_tkAIn, xHandle_tkGprs, xHandle_tkConsignas;
+TaskHandle_t xHandle_tkCmd, xHandle_tkControl, xHandle_tkDigitalIn, xHandle_tkAIn, xHandle_tkGprs , xHandle_tkGprsRx, xHandle_tkConsignas;
 
 s08 startTask;
 typedef struct {
@@ -122,11 +125,11 @@ wdgStatus_t wdgStatus, wdgStatusEE;
 xSemaphoreHandle sem_SYSVars;
 #define MSTOTAKESYSVARSSEMPH ((  TickType_t ) 10 )
 
-typedef enum { WK_IDLE = 0, WK_NORMAL = 1, WK_SERVICE = 2, WK_MONITOR_FRAME = 3, WK_MONITOR_SQE = 4  } t_wrkMode;
-typedef enum { PWR_CONTINUO = 0, PWR_DISCRETO = 1 } t_pwrMode;
-typedef enum { CONSIGNA_OFF = 0, CONSIGNA_ON = 1 } t_consignaMode;
+typedef enum { WK_IDLE = 0, WK_NORMAL, WK_SERVICE, WK_MONITOR_FRAME, WK_MONITOR_SQE  } t_wrkMode;
+typedef enum { PWR_CONTINUO = 0, PWR_DISCRETO } t_pwrMode;
+typedef enum { CONSIGNA_OFF = 0, CONSIGNA_ON } t_consignaMode;
 typedef enum { CONSIGNA_DIURNA = 0, CONSIGNA_NOCTURNA } t_consignaAplicada;
-typedef enum { modoPWRSAVE_OFF = 0, modoPWRSAVE_ON = 1 } t_pwrSave;
+typedef enum { modoPWRSAVE_OFF = 0, modoPWRSAVE_ON } t_pwrSave;
 
 #define PRENDIDO	TRUE
 #define APAGADO		FALSE
@@ -310,6 +313,7 @@ u08 systemWdg;
 #define WDG_CSG			0x08
 #define WDG_AIN			0x10
 #define WDG_GPRS		0x20
+#define WDG_GPRSRX		0x40
 
 //------------------------------------------------------------------------------------
 // TERMINAL
@@ -327,6 +331,9 @@ s08 terminal_isPrendida(void);			// Publica
 void terminal_restartTimer( u16 secs);	// Publica
 
 char debug_printfBuff[CHAR128];
+
+#define T_DAILYRESET		1440
+#define T_EXITSERVICEMODE	30
 
 
 #endif /* SP5K_H_ */

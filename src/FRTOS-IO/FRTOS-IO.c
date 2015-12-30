@@ -80,7 +80,7 @@ UART_device_control_t *pxNewUart;
 	// Creo el semaforo del bus
 	// En el caso de las UART el semaforo es de c/u.
 	pxPeripheralControl->xBusSemaphore = xSemaphoreCreateMutex();
-	pxPeripheralControl->xBlockTime = (50 / portTICK_RATE_MS );
+	pxPeripheralControl->xBlockTime = (100 / portTICK_RATE_MS );
 
 	pxNewUart = ( int8_t * ) pvPortMalloc( sizeof(UART_device_control_t ));
 	( flags & UART_RXFIFO) ?  ( pxNewUart->rxBufferType = FIFO ) : (pxNewUart->rxBufferType = QUEUE );

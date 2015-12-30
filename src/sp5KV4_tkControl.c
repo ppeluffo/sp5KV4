@@ -21,8 +21,8 @@ void pv_checkTerminal(void);
 TimerHandle_t terminalTimer;
 void  pv_terminalTimerCallBack( TimerHandle_t pxTimer );
 
-TimerHandle_t dailyResetTimer;
-void  pv_dailyResetTimerCallBack( TimerHandle_t pxTimer );
+TimerHandle_t oneMinTimer;
+void  pv_1MinTimerCallBack( TimerHandle_t pxTimer );
 
 s08 f_terminalPrendida;
 s08 f_terminalCallback;
@@ -63,7 +63,7 @@ StatBuffer_t pxFFStatBuffer;
 	FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
 
 	// Arranco el timer que va a resetear a diario el dlg
-	if ( xTimerStart( dailyResetTimer, 0 ) != pdPASS )
+	if ( xTimerStart( oneMinTimer, 0 ) != pdPASS )
 		u_panic(P_CTL_TIMERSTART);
 
 	f_terminalPrendida = TRUE; 	// Se prende al inicializar el MCP.
@@ -108,6 +108,7 @@ StatBuffer_t pxFFStatBuffer;
 		pv_flashLeds();
 		pv_checkWdg();
 		pv_checkTerminal();
+
 	}
 }
 //------------------------------------------------------------------------------------
@@ -130,18 +131,18 @@ void tkControlInit(void)
 	if ( terminalTimer == NULL )
 		u_panic(P_CTL_TIMERCREATE);
 
-	dailyResetTimer = xTimerCreate (  "DRES_T",
+	oneMinTimer = xTimerCreate (  "1MIN_T",
 	                     /* The timer period in ticks, must be greater than 0. */
 	                     ( 60000 / portTICK_PERIOD_MS) ,
 	                     /* The timers will auto-reload themselves when they expire. */
-	                     pdFALSE,
+	                     pdTRUE,
 	                     /* Assign each timer a unique id equal to its array index. */
 	                     ( void * ) NULL,
 	                     /* Each timer calls the same callback when it expires. */
-						 pv_dailyResetTimerCallBack
+						 pv_1MinTimerCallBack
 	                   );
 
-	if ( dailyResetTimer == NULL )
+	if ( oneMinTimer == NULL )
 		u_panic(P_CTL_TIMERCREATE);
 }
 //------------------------------------------------------------------------------------
@@ -226,21 +227,44 @@ static u08 l_timer = 2;
 	l_timer = 1;
 	if ( systemWdg == 0 ) {
 		wdt_reset();
-		systemWdg = WDG_CTL + WDG_CMD + WDG_CSG + WDG_DIN + WDG_AIN + WDG_GPRS;
+		systemWdg = WDG_CTL + WDG_CMD + WDG_CSG + WDG_DIN + WDG_AIN + WDG_GPRS + WDG_GPRSRX;
 	}
 }
 //------------------------------------------------------------------------------------
-void  pv_dailyResetTimerCallBack( TimerHandle_t pxTimer )
+void  pv_1MinTimerCallBack( TimerHandle_t pxTimer )
 {
-	// Una vez por dia el equipo se debe resetear.
-	// El timer invoca esta rutina c/1 minuto por lo tanto de contar
-	// hasta 1440.
+	// Funcion de callback que se invoca 1 vez por minuto.
+	// Aqui controlo todas las cosas que quiero con 1m de granularidad del timer.
 
-static s16 resetCounter = 1440;
+	// Daily reset: una vez por dia me debo resetear ( 1440 mins )
+	// Si estoy en modo service, a los 30 mins debo resetearme.
 
+
+static s16 resetCounter = T_DAILYRESET;
+static s16 serviceModeCounter = T_EXITSERVICEMODE;
+
+	// Una vez por dia me reseteo.
 	if ( resetCounter-- <= 0 ) {
+
+		snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("Going to daily reset..\r\n\0"));
+		FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
+
 		wdt_enable(WDTO_30MS);
 		while(1) {}
+	}
+
+	// En modo service, a los 30 mins. me reseteo para salir solo
+	if ( systemVars.wrkMode != WK_NORMAL ) {
+
+		if ( serviceModeCounter-- <= 0 ) {
+
+			snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("Automatic exit of service mode..\r\n\0"));
+			FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
+
+			wdt_enable(WDTO_30MS);
+			while(1) {}
+		}
+
 	}
 }
 //------------------------------------------------------------------------------------
