@@ -158,19 +158,19 @@ void MCP_init(void)
 
 }
 //------------------------------------------------------------------------------------
-s08 MCP_queryDcd( u08 *pin)
-{
+//s08 MCP_queryDcd( u08 *pin)
+//{
 // MCP23008 logic
 
-s08 retS;
-u08 regValue;
+//s08 retS;
+//u08 regValue;
 
 	// DCD es el bit1, mask = 0x02
-	retS = MCP_read( MCP0_ADDR, MCP0_GPIO, &regValue);
-	*pin = ( regValue & 0x02) >> 1;
+//	retS = MCP_read( MCP0_ADDR, MCP0_GPIO, &regValue);
+//	*pin = ( regValue & 0x02) >> 1;
 	//*pin = ( regValue & _BV(1) ) >> 1;		// bit1, mask = 0x02
-	return(retS);
-}
+//	return(retS);
+//}
 //------------------------------------------------------------------------------------
 s08 MCP_queryRi( u08 *pin)
 {

@@ -41,8 +41,11 @@ BaseType_t xResult;
 uint32_t ulNotifiedValue;
 
 	// Los pines del micro que resetean los latches de caudal son salidas.
-	sbi(Q_DDR, Q0_CTL_PIN);
-	sbi(Q_DDR, Q1_CTL_PIN);
+	//sbi(Q_DDR, Q0_CTL_PIN);
+	//sbi(Q_DDR, Q1_CTL_PIN);
+
+	// El pin de control de la terminal es entrada
+	//cbi(TERMSW_DDR, TERMSW_BIT);
 
 	while ( !startTask )
 		vTaskDelay( ( TickType_t)( 100 / portTICK_RATE_MS ) );
@@ -58,7 +61,7 @@ uint32_t ulNotifiedValue;
 	digIn.pulses[1] = 0;
 
 	// Inicializo el valor del dcd.
-	MCP_queryDcd(&systemVars.dcd);
+	u_readDCD(&systemVars.dcd);
 
 	D_flags.msgReload = FALSE;
 	D_flags.serviceMode = FALSE;
@@ -117,7 +120,7 @@ s08 retS = FALSE;
 u08 pin;
 u32 tickCount;
 
-	retS = MCP_queryDcd(&pin);
+	retS = u_readDCD(&pin);
 	// Solo indico los cambios.
 	if ( systemVars.dcd != pin ) {
 		systemVars.dcd = pin;

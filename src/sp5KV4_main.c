@@ -99,6 +99,17 @@ static void pv_initMPU(void)
 {
 	// Son acciones que se hacen antes de arrancar el RTOS
 
+	// Configuracion de pines:
+	// Los pines del micro que resetean los latches de caudal son salidas.
+	sbi(Q_DDR, Q0_CTL_PIN);
+	sbi(Q_DDR, Q1_CTL_PIN);
+
+	// El pin de control de la terminal es entrada
+	cbi(TERMSW_DDR, TERMSW_BIT);
+
+	// El pin de DCD es entrada
+	cbi(DCD_DDR, DCD_BIT);
+
 	// Leo la configuracion de la EEprom interna
 
 	// Configuro el modo de Sleep.

@@ -123,7 +123,7 @@ s08 pvMCP_testAndSet( u08 deviceId, u08 byteAddress, u08 value, u08 bitMask );
 #define MODEM_SWswitchHIGH() ( pvMCP_testAndSet( MCP0_ADDR, MCP0_GPIO, 0, MCP0_GPIO_OGPRSSW ) )
 #define MODEM_SWswitchLOW() ( pvMCP_testAndSet( MCP0_ADDR, MCP0_GPIO, 1, MCP0_GPIO_OGPRSSW ) )
 
-s08 MCP_queryDcd( u08 *pin);
+//s08 MCP_queryDcd( u08 *pin);
 s08 MCP_queryRi( u08 *pin);
 s08 MCP_queryDin0( u08 *pin);
 s08 MCP_queryDin1( u08 *pin);

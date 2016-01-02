@@ -1190,7 +1190,7 @@ u08 pin;
 s08 retS = FALSE;
 u08 pos;
 
-	retS = MCP_queryDcd(&pin);
+	retS = u_readDCD(&pin);
 	if (retS ) {
 		pos = snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("OK\r\n"));
 		if ( pin == 1 ) { pos += snprintf_P( &cmd_printfBuff[pos],(sizeof(cmd_printfBuff) - pos),PSTR("DCD ON(1)\r\n\0")); }

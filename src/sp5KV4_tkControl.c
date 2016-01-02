@@ -119,7 +119,7 @@ void tkControlInit(void)
 	// Creo el timer de la terminal y lo arranco
 	terminalTimer = xTimerCreate (  "TERM_T",
 	                     /* The timer period in ticks, must be greater than 0. */
-	                     ( 60000 / portTICK_PERIOD_MS) ,
+	                     ( 120000 / portTICK_PERIOD_MS) ,
 	                     /* The timers will auto-reload themselves when they expire. */
 	                     pdFALSE,
 	                     /* Assign each timer a unique id equal to its array index. */

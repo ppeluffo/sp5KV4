@@ -456,10 +456,18 @@ RtcTimeType_t rtcDateTime;
 	return(nowStr);
 }
 //------------------------------------------------------------------------------------
-u08 u_readTermsw(u08 *pin)
+s08 u_readTermsw(u08 *pin)
 {
 	// El TERMSW se cablea a PD7.
 	*pin = ( TERMSW_PIN & _BV(7) ) >> 7;
+	return(TRUE);
+
+}
+//------------------------------------------------------------------------------------
+s08 u_readDCD(u08 *pin)
+{
+	// El DCD se cablea a PB3.
+	*pin = ( DCD_PIN & _BV(3) ) >> 3;
 	return(TRUE);
 
 }

@@ -54,8 +54,8 @@
 
 // DEFINICION DEL TIPO DE SISTEMA
 //----------------------------------------------------------------------------
-#define SP5K_REV "4.0.6"
-#define SP5K_DATE "@ 20151230"
+#define SP5K_REV "4.0.7"
+#define SP5K_DATE "@ 20160102"
 
 #define SP5K_MODELO "sp5KV3 HW:avr1284P R5.0"
 #define SP5K_VERSION "FW:FRTOS8"
@@ -273,8 +273,9 @@ s08 u_saveSystemParams(void);
 s08 u_loadSystemParams(void);
 void u_loadDefaults(void);
 char *u_now(void);
-u08 u_readTermsw(u08 *pin);
+s08 u_readTermsw(u08 *pin);
 void u_restartTimerTerminal(void);
+s08 u_readDCD(u08 *pin);
 
 char nowStr[32];
 
@@ -335,5 +336,15 @@ char debug_printfBuff[CHAR128];
 #define T_DAILYRESET		1440
 #define T_EXITSERVICEMODE	30
 
+//------------------------------------------------------------------------------------
+// DCD
+// Como el MCP23018 a veces no detecta el nivel del modem, cableamos
+// el DCD a PB3
+// Pin de control de fuente de la terminal ( PB3)
+#define DCD_PORT		PORTB
+#define DCD_PIN			PINB
+#define DCD_BIT			3
+#define DCD_DDR			DDRB
+#define DCD_MASK		0x8
 
 #endif /* SP5K_H_ */

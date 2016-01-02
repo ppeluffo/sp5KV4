@@ -362,9 +362,9 @@ size_t pos;
 
 			// Siempre que DCD = 1, el socket esta cerrado. Puede que no lo detecte, en dicho
 			// caso uso el sistema de respuestas del modem
-			if ( systemVars.dcd == 1 ) {
-				GPRS_flags.socketStatus = SOCKET_CLOSED;
-			}
+			//if ( systemVars.dcd == 1 ) {
+			//	GPRS_flags.socketStatus = SOCKET_CLOSED;
+			//}
 
 			// el read se bloquea 50ms. lo que genera la espera.
 			while ( FreeRTOS_read( &pdUART0, &c, 1 ) == 1 ) {
@@ -375,28 +375,32 @@ size_t pos;
 				// Los comandos vienen terminados en CR
 				if (c == '\r') {
 
-					if ( pv_GPRSstrstr("CONNECT", &pos ) == TRUE ) {
-						GPRS_flags.socketStatus = SOCKET_OPEN;
-						GPRS_flags.modemResponse = MRSP_NONE;
-						//FreeRTOS_write( &pdUART1, "MRSP_CONNECT\r\n\0", sizeof("MRSP_CONNECT\r\n\0") );
-					} else if ( pv_GPRSstrstr("NO CARRIER", &pos ) == TRUE ) {
-						GPRS_flags.socketStatus = SOCKET_CLOSED;
-						GPRS_flags.modemResponse = MRSP_NONE;
-						//FreeRTOS_write( &pdUART1, "MRSP_NO CARRIER\r\n\0", sizeof("MRSP_NO CARRIER\r\n\0") );
-					}
-
 					if ( pv_GPRSstrstr("OK\r", &pos ) == TRUE ) {
 						GPRS_flags.modemResponse = MRSP_OK;
 						// Una respuesta indica offline == s.closed
 						GPRS_flags.socketStatus = SOCKET_CLOSED;
 						//FreeRTOS_write( &pdUART1, "MRSP_OK\r\n\0", sizeof("MRSP_OK\r\n\0") );
+					}
 
-					} else if ( pv_GPRSstrstr("ERROR\r", &pos ) == TRUE ) {
+					if ( pv_GPRSstrstr("ERROR\r", &pos ) == TRUE ) {
 						GPRS_flags.modemResponse = MRSP_ERROR;
 						// Una respuesta indica offline == s.closed
 						GPRS_flags.socketStatus = SOCKET_CLOSED;
 						//FreeRTOS_write( &pdUART1, "MRSP_ERROR\r\n\0", sizeof("MRSP_ERROR\r\n\0") );
 					}
+
+					if ( pv_GPRSstrstr("CONNECT", &pos ) == TRUE ) {
+						GPRS_flags.socketStatus = SOCKET_OPEN;
+						GPRS_flags.modemResponse = MRSP_NONE;
+						//FreeRTOS_write( &pdUART1, "MRSP_CONNECT\r\n\0", sizeof("MRSP_CONNECT\r\n\0") );
+					}
+
+					if ( pv_GPRSstrstr("NO CARRIER", &pos ) == TRUE ) {
+						GPRS_flags.socketStatus = SOCKET_CLOSED;
+						GPRS_flags.modemResponse = MRSP_NONE;
+						//FreeRTOS_write( &pdUART1, "MRSP_NO CARRIER\r\n\0", sizeof("MRSP_NO CARRIER\r\n\0") );
+					}
+
 				}
 
 			}
@@ -1800,6 +1804,7 @@ static int gTR_k04(void)
 
 	// Leo y Evaluo la respuesta al comando AT*E2IPO ( open socket )
 	// La respuesta correcta debe ser CONNECT
+	// La evalua la tarea tkGprsRX.
 
 	// Muestro la respuesta del modem
 	pv_GPRSprintRxBuffer();
