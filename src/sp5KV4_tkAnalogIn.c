@@ -47,6 +47,7 @@ static u08 tkAIN_state = tkdST_INIT;	// Estado
 static u32 tickCount;					// para usar en los mensajes del debug.
 static double rAIn[NRO_CHANNELS + 1];	// Almaceno los datos de conversor A/D
 static frameData_t Aframe;
+static s08 f_skipFrame;					// indico si el frame leido debe ser descartado ( MCP error )
 
 static struct {
 	s08 starting;			// flag que estoy arrancando
@@ -71,6 +72,8 @@ static void pv_AINfsm(void);
 static void pv_AINprintExitMsg(u08 code);
 static void pv_AinLoadParameters( void );
 void pv_pollTimerCallback( TimerHandle_t pxTimer );
+
+void catch_I2C_Error( u08 channel );
 
 //--------------------------------------------------------------------------------------
  void tkAnalogIn(void * pvParameters)
@@ -333,21 +336,28 @@ static int trD02(void)
 {
 	// tkdST_STANDBY->tkdST_PWRSETTLE
 
+	// Aqui comienza un ciclo de poleo: indico a tkGprs que no disque.
+	while ( xTaskNotify(xHandle_tkGprs, TKG_PARAM_NO_DIAL , eSetBits ) != pdPASS ) {
+		vTaskDelay( ( TickType_t)( 100 / portTICK_RATE_MS ) );
+	}
+
 	wdgStatus.analogCP = 7;
 
 	AN_flags.start2poll = FALSE;
+	// Inicialmente el frame esta bueno.
+	f_skipFrame = FALSE;
 	// Inicio el contador de segundos para que se estabilizen las fuentes.
 	AN_counters.secs2pwrSettle = SECS2PWRSETTLE;
 
 	// Siempre prendo las fuentes. Si estoy en modo continuo ya van a estar prendidas
 	// por lo que no hace nada.
 	if ( ! MCP_setSensorPwr( 1 ) ) {
-		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD02 pwrOn sensors ERROR !!\r\n\0"), tickCount);
-		u_debugPrint(D_BASIC, aIn_printfBuff, sizeof(aIn_printfBuff) );
+		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("**DEBUG::tkAnalogIn::trD02 pwrOn sensors ERROR !!\r\n\0"));
+		u_debugPrint(D_DEBUG, aIn_printfBuff, sizeof(aIn_printfBuff) );
 	}
 	if ( ! MCP_setAnalogPwr( 1 ) ) {
-		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD02 pwrOn analogPwr ERROR !!\r\n\0"), tickCount);
-		u_debugPrint(D_BASIC, aIn_printfBuff, sizeof(aIn_printfBuff) );
+		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("**DEBUG::tkAnalogIn::trD02 pwrOn analogPwr ERROR !!\r\n\0"));
+		u_debugPrint(D_DEBUG, aIn_printfBuff, sizeof(aIn_printfBuff) );
 	}
 
 
@@ -406,9 +416,11 @@ s08 retS;
 	tickCount = xTaskGetTickCount();
 	retS = ADS7827_readCh0( &adcRetValue);
 	if ( !retS ) {
-		rdErrors++;
-		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD05 Dummy ERROR !!\r\n\0"), tickCount);
-		u_debugPrint(D_BASIC, aIn_printfBuff, sizeof(aIn_printfBuff) );
+		catch_I2C_Error(0);
+		// Posiblemente el MCP esta bien pero ya no prendi al ADC. Lo prendo
+		MCP_setSensorPwr( 1 );
+		MCP_setAnalogPwr( 1 );
+		vTaskDelay( ( TickType_t)( 1500 / portTICK_RATE_MS ) );
 	}
 
 	if ( AN_counters.nroPoleos > 0 ) {
@@ -425,9 +437,7 @@ s08 retS;
 
 	retS = ADS7827_readCh0( &adcRetValue);	// AIN0->ADC3;
 	if ( !retS ) {
-		rdErrors++;
-		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD05 CH0 ERROR !!\r\n\0"), tickCount);
-		u_debugPrint(D_BASIC, aIn_printfBuff, sizeof(aIn_printfBuff) );
+		catch_I2C_Error(0);
 	}
 	rAIn[0] += adcRetValue;
 	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("\tch_0,adc_3,val=%d,r0=%.0f\r\n\0"),adcRetValue, rAIn[0]);
@@ -435,9 +445,7 @@ s08 retS;
 
 	retS = ADS7827_readCh1( &adcRetValue); // AIN1->ADC5;
 	if ( !retS ) {
-		rdErrors++;
-		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD05 CH1 ERROR !!\r\n\0"), tickCount);
-		u_debugPrint(D_BASIC, aIn_printfBuff, sizeof(aIn_printfBuff) );
+		catch_I2C_Error(1);
 	}
 	rAIn[1] += adcRetValue;
 	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("\tch_1,adc_5,val=%d,r1=%.0f\r\n\0"),adcRetValue, rAIn[1]);
@@ -445,9 +453,7 @@ s08 retS;
 
 	retS = ADS7827_readCh2( &adcRetValue); // AIN2->ADC7;
 	if ( !retS ) {
-		rdErrors++;
-		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD05 CH2 ERROR !!\r\n\0"), tickCount);
-		u_debugPrint(D_BASIC, aIn_printfBuff, sizeof(aIn_printfBuff) );
+		catch_I2C_Error(2);
 	}
 	rAIn[2] += adcRetValue;
 	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("\tch_2,adc_7,val=%d,r1=%.0f\r\n\0"), adcRetValue, rAIn[2]);
@@ -455,9 +461,7 @@ s08 retS;
 
 	retS = ADS7827_readBatt( &adcRetValue); // BATT->ADC1;
 	if ( !retS ) {
-		rdErrors++;
-		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD05 Batt ERROR !!\r\n\0"), tickCount);
-		u_debugPrint(D_BASIC, aIn_printfBuff, sizeof(aIn_printfBuff) );
+		catch_I2C_Error(3);
 	}
 	rAIn[3] += adcRetValue;
 	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("\tch_3,adc_1,val=%d,r1=%.0f\r\n\0"), adcRetValue, rAIn[3]);
@@ -484,16 +488,16 @@ StatBuffer_t pxFFStatBuffer;
 	//  En modo discreto debo apagar sensores
 	if ( (systemVars.pwrMode == PWR_DISCRETO ) && ( systemVars.wrkMode == WK_NORMAL )) {
 		if ( ! MCP_setSensorPwr( 0 ) ) {
-			snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD06 pwroff sensors ERROR !!\r\n\0"), tickCount);
-			u_debugPrint(D_BASIC, aIn_printfBuff, sizeof(aIn_printfBuff) );
+			snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("**DEBUG::tkAnalogIn::trD06 pwroff sensors ERROR !!\r\n\0"));
+			u_debugPrint(D_DEBUG, aIn_printfBuff, sizeof(aIn_printfBuff) );
 		}
 		if ( ! MCP_setAnalogPwr( 0 ) ) {
-			snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD06 pwroff analogPwr ERROR !!\r\n\0"), tickCount);
-			u_debugPrint(D_BASIC, aIn_printfBuff, sizeof(aIn_printfBuff) );
+			snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("**DEBUG::tkAnalogIn::trD06 pwroff analogPwr ERROR !!\r\n\0"));
+			u_debugPrint(D_DEBUG, aIn_printfBuff, sizeof(aIn_printfBuff) );
 		}
 
 		tickCount = xTaskGetTickCount();
-		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::trD06 pwroff sensors\r\n\0"), tickCount);
+		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("**DEBUG::tkAnalogIn::trD06 pwroff sensors\r\n\0"));
 		u_debugPrint(D_DATA, aIn_printfBuff, sizeof(aIn_printfBuff) );
 	}
 
@@ -537,7 +541,10 @@ StatBuffer_t pxFFStatBuffer;
 
 	// Valores analogicos
 	for ( channel = 0; channel < NRO_CHANNELS; channel++) {
-		Aframe.analogIn[channel] = rAIn[channel];
+		// Si la lectura es correcta paso los datos al Aframe
+		if ( f_skipFrame == FALSE ) {
+			Aframe.analogIn[channel] = rAIn[channel];
+		}
 		pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR("%s=%.02f,"),systemVars.aChName[channel],Aframe.analogIn[channel] );
 	}
 
@@ -550,7 +557,10 @@ StatBuffer_t pxFFStatBuffer;
 	pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR("%sP=%.02f,%sL=%d"), systemVars.dChName[1],Aframe.dIn.pulses[1],systemVars.dChName[1],Aframe.dIn.level[1],systemVars.dChName[1]);
 
 	// Bateria
-	Aframe.batt = rAIn[3];
+	// Si la lectura es correcta paso los datos al Aframe
+	if ( f_skipFrame == FALSE ) {
+		Aframe.batt = rAIn[3];
+	}
 	pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR(",bt=%.02f}\0"),Aframe.batt );
 
 	xSemaphoreGive( sem_SYSVars );
@@ -578,17 +588,30 @@ StatBuffer_t pxFFStatBuffer;
 	// En modo normal o monitor frame muestro el dato
 	if ( systemVars.wrkMode == WK_NORMAL ) {
 		// En modo normal agrego el mem.stats
-		pos = snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR(" MEM [%d/%d/%d][%d/%d]\r\n\0"), pxFFStatBuffer.HEAD,pxFFStatBuffer.RD, pxFFStatBuffer.TAIL,pxFFStatBuffer.rcdsFree,pxFFStatBuffer.rcds4del);
+		pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR(" MEM [%d/%d/%d][%d/%d]\r\n\0"), pxFFStatBuffer.HEAD,pxFFStatBuffer.RD, pxFFStatBuffer.TAIL,pxFFStatBuffer.rcdsFree,pxFFStatBuffer.rcds4del);
 		FreeRTOS_write( &pdUART1, "POLL->\0", sizeof("POLL->\0") );
 	} else if ( systemVars.wrkMode == WK_MONITOR_FRAME ) {
-		pos = snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR("\r\n\0"));
+		pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR("\r\n\0"));
 		FreeRTOS_write( &pdUART1, "MON->\0", sizeof("MON->\0") );
 	} else {
-		pos = snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR("\r\n\0"));
+		pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR("\r\n\0"));
 	}
+
+	if ( f_skipFrame == TRUE ) {
+		pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ),PSTR("Skipped frame\r\n\0"));
+	}
+
 	FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
 
+
+
 quit:
+
+	// Aqui termino un ciclo de poleo: indico a tkGprs que puede discar.
+	while ( xTaskNotify(xHandle_tkGprs, TKG_PARAM_CAN_DIAL , eSetBits ) != pdPASS ) {
+		vTaskDelay( ( TickType_t)( 100 / portTICK_RATE_MS ) );
+	}
+
 	pv_AINprintExitMsg(6);
 	return(tkdST_STANDBY);
 
@@ -647,5 +670,56 @@ void u_readAnalogFrame (frameData_t *dFrame)
 	wdgStatus.analogCP = 15;
 
 	memcpy(dFrame, &Aframe, sizeof(Aframe) );
+}
+/*------------------------------------------------------------------------------------*/
+void catch_I2C_Error( u08 channel )
+{
+	// Invocada por un error en la lectura de un canal del ADC.
+	// H1) El ADC anda mal
+	// H2) El ADC esta apagado porque el MCP23018 no lo puede prender
+	// H3) El ADC anda mal porque el TPS731XX no lo puede prender
+	// H4) El bus I2C esta mal.
+
+	// Verifico la H4 leyendo el RTC. Si el bus I2C esta mal, no voy a poder leer el RTC
+	// tampoco.
+
+	// 2016-01-18:
+	// El problema que veo es que el MPC23018 esta desconfigurado y por eso los pines que
+	// deben actuar como salidas no lo hacen.
+	// Esto hace que no prenda las fuentes y por eso el ADC no es leido bien y se genera
+	// el error.
+
+
+//RtcTimeType_t rtcDateTime;
+s08 retS = FALSE;
+u08 regValue;
+
+	// Cuento los errores para resetearme
+	rdErrors++;
+	f_skipFrame = TRUE;
+
+//	retS = RTC_read(&rtcDateTime);
+	retS = MCP_read( MCP1_ADDR, 0x01, &regValue );
+	if ( !retS ) {
+		// No pude leer el MCP. Asumo un problema en el bus.
+		// Deshabilito la interfase TWI. La proxima lectura la voy a habilitar y veremos
+		// si esto soluciona el problema.
+		TWCR &= ~(1 << TWEN);
+
+		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("**DEBUG::tkAnalogIn::trD05 I2C BUS ERROR !! Disable interface...\r\n\0"));
+	} else {
+		// El bus I2C anda bien y el problema esta en el ADC o en el MCP
+		if ( regValue != 0x64) {
+			// El MCP esta desconfigurado: Lo reprogramo
+			snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("**DEBUG::tkAnalogIn::trD05 MCP ERROR !!\r\n\0"));
+			pvMCP_init_MCP1(1);
+		} else {
+			// El problema esta en el ADC
+			snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("**DEBUG::tkAnalogIn::trD05 CH%d ADC ERROR !!\r\n\0"),channel);
+		}
+	}
+
+	u_debugPrint(D_DEBUG, aIn_printfBuff, sizeof(aIn_printfBuff) );
+
 }
 /*------------------------------------------------------------------------------------*/

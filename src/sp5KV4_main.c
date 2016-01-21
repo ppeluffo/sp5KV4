@@ -16,6 +16,27 @@
  *
  * !! Agregar el salir automaticamente luego de 30 mins del modo service.
  *
+ * V4.0.9:
+ * El problema es que el ADC no se prende y la lectura de los canales es erronea.
+ * La razon es que el MCP se resetea a default y por lo tanto no prende los sensores ni los 3.3V.
+ * Esto es porque el pigtail del modem irradia energia e introduce un pulso que resetea al MCP.
+ * Lo resolvemos en 3 flancos diferentes:
+ * 1- En la rutina MCP_testAndSet ( con la que prendemos los 3.3V ), verificamos que el MCP este configurado
+ * y sino lo reconfiguramos.
+ * 2- Hay veces que esto no es suficiente ya que entre tr02 y tr06, si se resetea el MCP no nos damos
+ * cuenta hasta que leemos el ADC.
+ * Entonces en tr02 mandamos un mensaje a tkGPRS que no trasmita, y en tr06 que puede trasmitir.
+ * Con esto controlo no irradiar energia que resetee al MCP mientras estoy poleando ( 15s ).
+ * En tkGPRS lo chequeo antes de perdir una IP y antes de abrir un socket.
+ * 3- En caso que nada funcione, en el modulo tkAnalog si una medida me da error ( lectura del ADC ), descarto
+ * la medida y la sustituyo por el valor anterior.
+ * Como la medida de los sensores se hace en 4 pasos, si el primero ( tr05) da error ( por estar apagado el ADC ),
+ * puedo corregirlo y prenderlo.
+ *
+ * El mismo problema de desconfiguracion puede ocurrir al setear las consignas.
+ * Para esto entonces fijo que para setear las consignas el modem deba estar apagado.
+ * La tarea tkConsignas consulta el estado del modem con u_modemPwrStatus()
+ *
  * ----------------------------------------------------------------------------------------------------------------
  */
 
@@ -85,7 +106,7 @@ unsigned int i,j;
 	xTaskCreate(tkAnalogIn, "AIN", tkAIn_STACK_SIZE, NULL, tkAIn_TASK_PRIORITY,  &xHandle_tkAIn);
 	xTaskCreate(tkGprs, "GPRS", tkGprs_STACK_SIZE, NULL, tkGprs_TASK_PRIORITY,  &xHandle_tkGprs);
 	xTaskCreate(tkConsignas, "CONS", tkCons_STACK_SIZE, NULL, tkCons_TASK_PRIORITY,  &xHandle_tkConsignas);
-	xTaskCreate(tkGprsRx, "GPRSRX", tkGprsRx_STACK_SIZE, NULL, tkGprsRx_TASK_PRIORITY,  &xHandle_tkGprsRx);
+	xTaskCreate(tkGprsRx, "GPRX", tkGprsRx_STACK_SIZE, NULL, tkGprsRx_TASK_PRIORITY,  &xHandle_tkGprsRx);
 
 	/* Arranco el RTOS. */
 	vTaskStartScheduler();

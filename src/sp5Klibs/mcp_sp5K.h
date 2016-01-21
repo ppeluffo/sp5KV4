@@ -115,6 +115,7 @@ s08 pvMCP_testAndSet( u08 deviceId, u08 byteAddress, u08 value, u08 bitMask );
 #define MCP_setGprsPwr( value ) ( pvMCP_testAndSet( MCP0_ADDR, MCP0_GPIO, value, MCP0_GPIO_OGPRSPWR ) )
 #define MCP_setGprsSw( value ) ( pvMCP_testAndSet( MCP0_ADDR, MCP0_GPIO, value, MCP0_GPIO_OGPRSSW ) )
 #define MCP_setTermPwr( value ) ( pvMCP_testAndSet( MCP0_ADDR, MCP0_GPIO, value, MCP0_GPIO_OTERMPWR ) )
+
 #define MCP_setSensorPwr( value ) ( pvMCP_testAndSet( MCP1_ADDR, MCP1_OLATB, value, MCP1_PWRSENSORS ) )
 #define MCP_setAnalogPwr( value ) ( pvMCP_testAndSet( MCP1_ADDR, MCP1_OLATB, value, MCP1_OANALOG ) )
 //

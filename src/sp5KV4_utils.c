@@ -117,12 +117,22 @@ void u_configPwrSave(u08 modoPwrSave, char *s_startTime, char *s_endTime)
 //----------------------------------------------------------------------------------------
 void u_configConsignas( u08 modo, char *s_horaConsDia,char *s_horaConsNoc,char *chVA,char *chVB )
 {
+
+//	snprintf_P( debug_printfBuff,CHAR128,PSTR("DEBUG::u_configConsignas MODO=%d \r\n\0"), modo );
+//	FreeRTOS_write( &pdUART1, debug_printfBuff, sizeof(debug_printfBuff) );
+
 	while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 1 ) != pdTRUE )
 		taskYIELD();
 
 	switch(modo) {
 	case CONSIGNA_OFF:
 		systemVars.consigna.status = CONSIGNA_OFF;
+		if ( s_horaConsDia != NULL ) { systemVars.consigna.horaConsDia =  u_convertHHMM2min ( atol(s_horaConsDia) ); }
+		if ( s_horaConsNoc != NULL ) { systemVars.consigna.horaConsNoc =  u_convertHHMM2min ( atol(s_horaConsNoc) ); }
+		if ( chVA != NULL ) { systemVars.consigna.chVA = atoi(chVA); }
+		if ( chVB != NULL ) { systemVars.consigna.chVB = atoi(chVB); }
+//		snprintf_P( debug_printfBuff,CHAR128,PSTR("DEBUG::u_configConsignas OFF MODO=%d \r\n\0"), modo );
+//		FreeRTOS_write( &pdUART1, debug_printfBuff, sizeof(debug_printfBuff) );
 		break;
 	case CONSIGNA_ON:
 		systemVars.consigna.status = CONSIGNA_ON;
@@ -130,6 +140,8 @@ void u_configConsignas( u08 modo, char *s_horaConsDia,char *s_horaConsNoc,char *
 		if ( s_horaConsNoc != NULL ) { systemVars.consigna.horaConsNoc =  u_convertHHMM2min ( atol(s_horaConsNoc) ); }
 		if ( chVA != NULL ) { systemVars.consigna.chVA = atoi(chVA); }
 		if ( chVB != NULL ) { systemVars.consigna.chVB = atoi(chVB); }
+//		snprintf_P( debug_printfBuff,CHAR128,PSTR("DEBUG::u_configConsignas ON MODO=%d,%d,%d \r\n\0"), modo, systemVars.consigna.horaConsDia,systemVars.consigna.horaConsNoc );
+//		FreeRTOS_write( &pdUART1, debug_printfBuff, sizeof(debug_printfBuff) );
 		break;
 	}
 

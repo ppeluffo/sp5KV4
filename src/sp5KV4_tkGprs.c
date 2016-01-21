@@ -29,6 +29,8 @@
 #include "sp5KV4.h"
 
 static char gprs_printfBuff[CHAR256];
+static char gprsRX_printfBuff[CHAR64];
+
 TimerHandle_t dialTimer;
 
 static void pv_GPRSprintExitMsg(char *code);
@@ -99,6 +101,7 @@ typedef enum {
 				gSST_ONopenSocket_06,
 				gSST_ONopenSocket_07,
 				gSST_ONopenSocket_08,
+				gSST_ONopenSocket_09,
 
 				// Estado gST_ONinitFrame,
 				gSST_ONinitframe_Entry,
@@ -151,11 +154,12 @@ typedef enum {
 	ev_PWR_CONT,
 	ev_CLOTE_IS_0,
 	ev_GPRRSP_RXOK,
-	ev_TX_A_RCD
+	ev_TX_A_RCD,
+	ev_DONT_TX
 
 } t_tkGprs_eventos;
 
-#define gEVENT_COUNT		21
+#define gEVENT_COUNT		22
 
 static s08 gEventos[gEVENT_COUNT];
 
@@ -222,6 +226,7 @@ static int gTR_i07(void);
 static int gTR_i08(void);
 static int gTR_i09(void);
 static int gTR_i10(void);
+static int gTR_i11(void);
 
 // Estado ON SOCKET
 static void SM_onOpenSocket(void);
@@ -243,6 +248,8 @@ static int gTR_k14(void);
 static int gTR_k15(void);
 static int gTR_k16(void);
 static int gTR_k17(void);
+static int gTR_k18(void);
+static int gTR_k19(void);
 
 // Estado ON INITFRAME
 static void SM_onInitFrame(void);
@@ -297,18 +304,19 @@ typedef enum { MRSP_NONE = 0, MRSP_OK , MRSP_ERROR } t_modemResponse;
 
 static struct {
 	s08 arranque;
-	s08 sendTail;	// Las ventanas de datos pueden no ser completas y con esta flag lo indico.
+	s08 sendTail;		// Las ventanas de datos pueden no ser completas y con esta flag lo indico.
 	s08 msgReload;
 	s08 allowsSleep;
 	s08 start2dial;
 	s08 modemPwrStatus;
 	s08 gsmBandOK;
-	s08 memRcds4Tx;			// Registros en la memoria para trasmitir.
-	s08 memRcds4Del;		// Registros en la memoria para borrar ( ya leidos y trasmitidos )
+	s08 memRcds4Tx;		// Registros en la memoria para trasmitir.
+	s08 memRcds4Del;	// Registros en la memoria para borrar ( ya leidos y trasmitidos )
 	s08 txNewRcd;
 	s08 pwrSave;
 	u08 socketStatus;
 	u08 modemResponse;
+	s08 dialAllowed;	// Controla si puedo empezar a discar o no. ( por el problema de los MCP )
 
 } GPRS_flags;
 
@@ -346,8 +354,8 @@ size_t pos;
 	while ( !startTask )
 		vTaskDelay( ( TickType_t)( 100 / portTICK_RATE_MS ) );
 
-	snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("starting tkGprsRx..\r\n\0"));
-	FreeRTOS_write( &pdUART1, gprs_printfBuff, sizeof(gprs_printfBuff) );
+	snprintf_P( gprsRX_printfBuff,sizeof(gprsRX_printfBuff),PSTR("starting tkGprsRx..\r\n\0"));
+	FreeRTOS_write( &pdUART1, gprsRX_printfBuff, sizeof(gprsRX_printfBuff) );
 
 	GPRS_flags.socketStatus = SOCKET_CLOSED;
 	GPRS_flags.modemResponse = MRSP_NONE;
@@ -428,8 +436,8 @@ static void pv_GPRSprintRxBuffer(void)
 
 	if ( (systemVars.debugLevel & D_GPRS) != 0) {
 		tickCount = xTaskGetTickCount();
-		snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR(".[%06lu] tkGprs: Rsp=\r\n\0"),tickCount  );
-		FreeRTOS_write( &pdUART1, gprs_printfBuff, sizeof(gprs_printfBuff) );
+		snprintf_P( gprsRX_printfBuff,sizeof(gprsRX_printfBuff),PSTR(".[%06lu] tkGprs: Rsp=\r\n\0"),tickCount  );
+		FreeRTOS_write( &pdUART1, gprsRX_printfBuff, sizeof(gprsRX_printfBuff) );
 
 		// Imprimo todo el buffer de RX ( 640b). Sale por \0.
 		FreeRTOS_write( &pdUART1, gprsRx.buffer, UART0_RXBUFFER_LEN );
@@ -526,6 +534,7 @@ uint32_t ulNotifiedValue;
 	tkGprs_subState = gSST_OFF_Entry;
 	GPRS_flags.arranque = TRUE;
 	GPRS_flags.gsmBandOK = TRUE;
+	GPRS_flags.dialAllowed = FALSE;
 	//
 	// Arranco el timer de dial.
 	if ( xTimerStart( dialTimer, 0 ) != pdPASS )
@@ -542,6 +551,17 @@ uint32_t ulNotifiedValue;
 		if ( xResult == pdTRUE ) {
 			if ( ( ulNotifiedValue & TKG_PARAM_RELOAD ) != 0 ) {
 				GPRS_flags.msgReload = TRUE;
+			}
+			if ( ( ulNotifiedValue & TKG_PARAM_NO_DIAL ) != 0 ) {
+				GPRS_flags.dialAllowed = FALSE;
+				snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("**DEBUG::tkGprs stop DIAL...\r\n\0"));
+				u_debugPrint(D_DEBUG, gprs_printfBuff, sizeof(gprs_printfBuff) );
+			}
+
+			if ( ( ulNotifiedValue & TKG_PARAM_CAN_DIAL ) != 0 ) {
+				GPRS_flags.dialAllowed = TRUE;
+				snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("**DEBUG::tkGprs run DIAL...\r\n\0"));
+				u_debugPrint(D_DEBUG, gprs_printfBuff, sizeof(gprs_printfBuff) );
 			}
 		}
 
@@ -632,6 +652,8 @@ u08 i;
 		if ( GPRS_flags.modemResponse == MRSP_OK ) { gEventos[ev_M_RSP_OK] = TRUE; }
 		// ev_BAND_OK			NET gprsBand is correct.
 		if ( GPRS_flags.gsmBandOK == TRUE  ) { gEventos[ev_BAND_OK] = TRUE; }
+		// ev_DONT_TX
+		if ( GPRS_flags.dialAllowed == FALSE  ) { gEventos[ev_DONT_TX] = TRUE; }
 		break;
 
 	case gST_ONopenSocket:
@@ -647,6 +669,8 @@ u08 i;
 		if ( GPRS_flags.modemResponse == MRSP_ERROR ) { gEventos[ev_M_RSP_ERROR] = TRUE; }
 		// evCINITS_IS_0
 		if ( GPRS_counters.cInits <= 0 ) { gEventos[evCINITS_IS_0] = TRUE; }
+		// ev_DONT_TX
+		if ( GPRS_flags.dialAllowed == FALSE  ) { gEventos[ev_DONT_TX] = TRUE; }
 		break;
 
 	case gST_ONinitFrame:
@@ -662,6 +686,8 @@ u08 i;
 		if ( GPRS_flags.modemResponse == MRSP_ERROR ) { gEventos[ev_M_RSP_ERROR] = TRUE; }
 		// ev_SOCKET_CLOSED: ( NO CARRIER ) [DCD=1]
 		if ( GPRS_flags.socketStatus == SOCKET_CLOSED ) { gEventos[ev_SOCKET_CLOSED] = TRUE; }
+		// ev_DONT_TX
+		if ( GPRS_flags.dialAllowed == FALSE  ) { gEventos[ev_DONT_TX] = TRUE; }
 		break;
 
 	case gST_ONdata:
@@ -683,6 +709,8 @@ u08 i;
 		if ( GPRS_flags.txNewRcd == TRUE ) { gEventos[ev_TX_A_RCD] = TRUE; }
 		// ev_CLOTE_IS_0
 		if ( GPRS_counters.cLote <= 0 ) { gEventos[ev_CLOTE_IS_0] = TRUE; }
+		// ev_DONT_TX
+		if ( GPRS_flags.dialAllowed == FALSE  ) { gEventos[ev_DONT_TX] = TRUE; }
 		break;
 
 	}
@@ -1132,7 +1160,11 @@ static void SM_onOffline(void)
 		}
 		break;
 	case gSST_ONoffline_IP_01:
-		tkGprs_subState = gTR_i02();
+		if ( gEventos[ev_DONT_TX] ) {
+			tkGprs_subState =gTR_i11();
+		} else {
+			tkGprs_subState = gTR_i02();
+		}
 		break;
 	case gSST_ONoffline_IP_02:
 		if ( gEventos[evCTIMER_IS_0] ) {
@@ -1496,6 +1528,11 @@ size_t xBytes;
 	GPRS_counters.qTryes = 3;	// Pregunto hasta 3 veces
 	GPRS_counters.pTryes = 6;	// Con 6 reintentos c/u
 
+	if ( GPRS_flags.dialAllowed == FALSE ) {
+		snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("**DEBUG::tkGprs::i01 await 4 tx...\r\n\0"));
+		u_debugPrint(D_DEBUG, gprs_printfBuff, sizeof(gprs_printfBuff) );
+	}
+
 	pv_GPRSprintExitMsg("i01\0");
 	return(gSST_ONoffline_IP_01);
 }
@@ -1646,6 +1683,15 @@ static int gTR_i10(void)
 	return(gSST_OFF_Entry);
 }
 //------------------------------------------------------------------------------------
+static int gTR_i11(void)
+{
+	// gSST_ONoffline_IP_01 -> gSST_ONoffline_IP_01
+
+	//FreeRTOS_write( &pdUART1, ".\0", sizeof(".\0") );
+	return(gSST_ONoffline_IP_01);
+}
+//------------------------------------------------------------------------------------
+
 /*
  *  FUNCIONES DEL ESTADO ON-OPENSOCKET:
  *  El modem esta prendido y con una IP. Debe abrir un socket
@@ -1718,6 +1764,13 @@ static void SM_onOpenSocket(void)
 			tkGprs_subState = gTR_k17();
 		}
 		break;
+	case gSST_ONopenSocket_09:
+		if ( gEventos[ev_DONT_TX] ) {
+			tkGprs_subState = gTR_k19();
+		} else {
+			tkGprs_subState = gTR_k18();
+		}
+		break;
 
 	default:
 		snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("\r\ntkGprs::ERROR ONopenSocket: subState  (%d) NOT DEFINED\r\n\0"),tkGprs_subState);
@@ -1761,25 +1814,16 @@ static int gTR_k01(void)
 //------------------------------------------------------------------------------------
 static int gTR_k02(void)
 {
-	// gSST_ONopenSocket_01 -> gSST_ONopenSocket_02
-	// Abro el socket
+	// gSST_ONopenSocket_01 -> gSST_ONopenSocket_09
 
-size_t xBytes;
-
-	xBytes = snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("AT*E2IPO=1,\"%s\",%s\r\n\0"),systemVars.serverAddress,systemVars.serverPort);
-	FreeRTOS_ioctl( &pdUART0,ioctl_UART_CLEAR_RX_BUFFER, NULL);
-	pv_flushLocalGprsBuffer();
-	FreeRTOS_ioctl( &pdUART0,ioctl_UART_CLEAR_TX_BUFFER, NULL);
-	FreeRTOS_write( &pdUART0, gprs_printfBuff, sizeof(gprs_printfBuff) );
-
-	GPRS_counters.cTimer = 3;	// espero 5s antes de consultar
-
-	tickCount = xTaskGetTickCount();
-	snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR(".[%06lu] tkGprs: OPEN SOCKET (%d)\r\n\0"),tickCount, GPRS_counters.qTryes );
-	u_debugPrint(D_GPRS, gprs_printfBuff, sizeof(gprs_printfBuff) );
+	if ( GPRS_flags.dialAllowed == FALSE) {
+		snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("**DEBUG::tkGprs::k02 await 4 tx...\r\n\0"));
+		u_debugPrint(D_DEBUG, gprs_printfBuff, sizeof(gprs_printfBuff) );
+	}
 
 	pv_GPRSprintExitMsg("k02\0");
-	return(gSST_ONopenSocket_02);
+	return(gSST_ONopenSocket_09);
+
 }
 //------------------------------------------------------------------------------------
 static int gTR_k03(void)
@@ -1969,7 +2013,37 @@ static int gTR_k17(void)
 	return(gSST_ONopenSocket_01);
 
 }
+//------------------------------------------------------------------------------------
+static int gTR_k18(void)
+{
+	// gSST_ONopenSocket_09 -> gSST_ONopenSocket_02
+	// Abro el socket
 
+size_t xBytes;
+
+	xBytes = snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("AT*E2IPO=1,\"%s\",%s\r\n\0"),systemVars.serverAddress,systemVars.serverPort);
+	FreeRTOS_ioctl( &pdUART0,ioctl_UART_CLEAR_RX_BUFFER, NULL);
+	pv_flushLocalGprsBuffer();
+	FreeRTOS_ioctl( &pdUART0,ioctl_UART_CLEAR_TX_BUFFER, NULL);
+	FreeRTOS_write( &pdUART0, gprs_printfBuff, sizeof(gprs_printfBuff) );
+
+	GPRS_counters.cTimer = 3;	// espero 5s antes de consultar
+
+	tickCount = xTaskGetTickCount();
+	snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR(".[%06lu] tkGprs: OPEN SOCKET (%d)\r\n\0"),tickCount, GPRS_counters.qTryes );
+	u_debugPrint(D_GPRS, gprs_printfBuff, sizeof(gprs_printfBuff) );
+
+	pv_GPRSprintExitMsg("k18\0");
+	return(gSST_ONopenSocket_02);
+}
+//------------------------------------------------------------------------------------
+static int gTR_k19(void)
+{
+	// gSST_ONopenSocket_09 -> gSST_ONopenSocket_09
+
+	//FreeRTOS_write( &pdUART1, ".\0", sizeof(".\0") );
+	return(gSST_ONopenSocket_09);
+}
 //------------------------------------------------------------------------------------
 /*
  *  FUNCIONES DEL ESTADO ON-INITFRAME:

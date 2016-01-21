@@ -54,8 +54,8 @@
 
 // DEFINICION DEL TIPO DE SISTEMA
 //----------------------------------------------------------------------------
-#define SP5K_REV "4.0.7"
-#define SP5K_DATE "@ 20160102"
+#define SP5K_REV "4.0.9"
+#define SP5K_DATE "@ 20160121"
 
 #define SP5K_MODELO "sp5KV3 HW:avr1284P R5.0"
 #define SP5K_VERSION "FW:FRTOS8"
@@ -117,7 +117,11 @@ wdgStatus_t wdgStatus, wdgStatusEE;
 #define TKA_PARAM_RELOAD		0x01	// to tkAnalogIN: reload
 #define TKA_READ_FRAME			0x02	// to tkAnalogIN: (mode service) read a frame
 #define TKD_PARAM_RELOAD		0x01	// to tkDigitalIN: reload
+
 #define TKG_PARAM_RELOAD		0x01	// to tkGprsIN: reload
+#define TKG_PARAM_NO_DIAL		0x02	// to tkGprsIN: dial_not_allowed
+#define TKG_PARAM_CAN_DIAL		0x04	// to tkGprsIN: dial_allowed
+
 #define TKC_PARAM_RELOAD		0x01	// to tkConsIN: reload
 
 //------------------------------------------------------------------------------------
@@ -248,7 +252,7 @@ systemVarsType systemVars,tmpSV;
 #define Q1_CTL_PIN	3
 
 // DEBUG
-typedef enum { D_NONE = 0, D_BASIC = 1, D_DATA = 2, D_GPRS = 4, D_MEM = 8, D_DIGITAL = 16, D_EVENTOS = 32 } t_debug;
+typedef enum { D_NONE = 0, D_BASIC = 1, D_DATA = 2, D_GPRS = 4, D_MEM = 8, D_DIGITAL = 16, D_EVENTOS = 32, D_DEBUG = 64 } t_debug;
 typedef enum { M_OFF, M_OFF_IDLE, M_ON_CONFIG, M_ON_READY } t_modemStatus;
 typedef enum { OFF = 0, ON = 1 } t_onOff;
 typedef enum { T_APAGADA = 0, T_PRENDIDA = 1 } t_terminalStatus;
@@ -294,6 +298,7 @@ s08 u_terminalPwrStatus(void);
 s08 u_wrRtc(char *s);
 
 void u_debugPrint(u08 debugCode, char *msg, u16 size);
+void pvMCP_init_MCP1(u08 modo);
 
 //------------------------------------------------------------------------------------
 // PANIC CODES

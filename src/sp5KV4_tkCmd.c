@@ -404,6 +404,7 @@ StatBuffer_t pxFFStatBuffer;
 		if ( (systemVars.debugLevel & D_MEM) != 0)   { pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("+mem")); }
 		if ( (systemVars.debugLevel & D_EVENTOS) != 0)   { pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("+ev")); }
 		if ( (systemVars.debugLevel & D_DIGITAL) != 0)  { pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("+digital")); }
+		if ( (systemVars.debugLevel & D_DEBUG) != 0)  { pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("+debug")); }
 	}
 	snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
@@ -759,12 +760,12 @@ u08 argc;
 
 	// CONSIGNA
 	// consigna {on|off} hhmm1,hhmm2,ch1,ch2
-//	if (!strcmp_P( strupr(argv[1]), PSTR("CONSIGNA\0"))) {
-	//	if (!strcmp_P( strupr(argv[2]), PSTR("ON"))) { u_configConsignas( CONSIGNA_ON,argv[3],argv[4], argv[5],argv[6]); }
-	//	if (!strcmp_P( strupr(argv[2]), PSTR("OFF"))) { u_configConsignas( CONSIGNA_OFF,argv[3],argv[4], argv[5],argv[6]); }
-//		pv_snprintfP_OK();
-//		return;
-//	}
+	if (!strcmp_P( strupr(argv[1]), PSTR("CONSIGNA\0"))) {
+		if (!strcmp_P( strupr(argv[2]), PSTR("ON"))) { u_configConsignas( CONSIGNA_ON,argv[3],argv[4], argv[5],argv[6]); }
+		if (!strcmp_P( strupr(argv[2]), PSTR("OFF"))) { u_configConsignas( CONSIGNA_OFF,argv[3],argv[4], argv[5],argv[6]); }
+		pv_snprintfP_OK();
+		return;
+	}
 
 	//----------------------------------------------------------------------
 	// COMANDOS USADOS PARA DIAGNOSTICO
@@ -1158,6 +1159,17 @@ s08 pv_cmdWrDebugLevel(char *s)
 		}
 	}
 
+	if ((!strcmp_P( strupr(s), PSTR("+DEBUG")))) {
+		systemVars.debugLevel += D_DEBUG;
+		return(TRUE);
+	}
+
+	if ((!strcmp_P( strupr(s), PSTR("-DEBUG")))) {
+		if ( ( systemVars.debugLevel & D_DEBUG) != 0 ) {
+			systemVars.debugLevel -= D_DEBUG;
+			return(TRUE);
+		}
+	}
 	if ((!strcmp_P( strupr(s), PSTR("ALL")))) {
 		systemVars.debugLevel = D_DATA + D_GPRS + D_MEM + D_DIGITAL + D_EVENTOS;
 		return(TRUE);

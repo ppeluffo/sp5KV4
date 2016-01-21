@@ -14,7 +14,9 @@
 
 // Funciones privadas del modulo MCP
 static void pvMCP_init_MCP0(void);
-static void pvMCP_init_MCP1(void);
+void pvMCP_checkConfiguration(void);
+
+//static void pvMCP_init_MCP1(void);
 
 //------------------------------------------------------------------------------------
 // Funciones de uso general
@@ -95,6 +97,11 @@ s08 retS = FALSE;
 //	snprintf_P( debug_printfBuff,sizeof(debug_printfBuff),PSTR("MCPT&S [dev=%d][addr=%d][val=%d][msk=%d].\r\n\0"),deviceId, byteAddr, value,bitMask );
 //	FreeRTOS_write( &pdUART1, debug_printfBuff, sizeof(debug_printfBuff) );
 
+	// CONTROLO QUE SI EL MCP ES 23018 ESTE BIEN CONFIGURADO ANTES
+	if ( deviceId == MCP1_ADDR ) {
+		pvMCP_checkConfiguration();
+	}
+
 	// Lo primero es obtener el semaforo
 	FreeRTOS_ioctl(&pdI2C,ioctlOBTAIN_BUS_SEMPH, NULL);
 	// Luego indicamos el periferico i2c en el cual queremos leer
@@ -110,6 +117,7 @@ s08 retS = FALSE;
 	// Por ultimo leemos.
 	xBytes = 1;
 	xReturn = FreeRTOS_read(&pdI2C, &regValue, xBytes);
+
 	if (xReturn != xBytes ) {
 		goto quit;
 	}
@@ -142,6 +150,34 @@ quit:
 	return(retS);
 }
 //------------------------------------------------------------------------------------
+void pvMCP_checkConfiguration(void)
+{
+s08 retS = FALSE;
+u08 regValue;
+
+	// Si estoy aqui es porque algo fallo. Verifico la configuracion del MCP
+	retS = MCP_read( MCP1_ADDR, 0x01, &regValue );
+	if ( !retS ) {
+		// No pude leer el MCP. Asumo un problema en el bus.
+		// Deshabilito la interfase TWI. La proxima lectura la voy a habilitar y veremos
+		// si esto soluciona el problema.
+		TWCR &= ~(1 << TWEN);
+		snprintf_P( debug_printfBuff,sizeof(debug_printfBuff),PSTR("**DEBUG::pvMCP I2C BUS ERROR !! Disable interface...\r\n\0"));
+		u_debugPrint(D_DEBUG, debug_printfBuff, sizeof(debug_printfBuff) );
+		return;
+	}
+
+	// El bus I2C anda bien y el problema esta en el ADC o en el MCP
+	if ( regValue != 0x64) {
+		// El MCP esta desconfigurado: Lo reprogramo
+		snprintf_P( debug_printfBuff,sizeof(debug_printfBuff),PSTR("**DEBUG::pvMCP MCP ERROR !! Reconfigure...\r\n\0"));
+		u_debugPrint(D_DEBUG, debug_printfBuff, sizeof(debug_printfBuff) );
+		pvMCP_init_MCP1(1);
+		taskYIELD();
+	}
+}
+
+//------------------------------------------------------------------------------------
 // Funciones particulares
 //------------------------------------------------------------------------------------
 void MCP_init(void)
@@ -154,7 +190,7 @@ void MCP_init(void)
 	cbi(MCP1_DDR, MCP1_BIT);
 
 	pvMCP_init_MCP0();
-	pvMCP_init_MCP1();
+	pvMCP_init_MCP1(0);
 
 }
 //------------------------------------------------------------------------------------
@@ -339,6 +375,7 @@ u08 regOlatA, regOlatB;
 	return(retS);
 
 }
+
 /*------------------------------------------------------------------------------------*/
 // FUNCIONES PRIVADAS
 //------------------------------------------------------------------------------------
@@ -423,9 +460,10 @@ u08 xBytes = 0;
 	FreeRTOS_write( &pdUART1, "MCP0 init OK\r\n\0", sizeof("MCP0 init OK\r\n\0") );
 }
 //------------------------------------------------------------------------------------
-static void pvMCP_init_MCP1(void)
+void pvMCP_init_MCP1(u08 modo)
 {
 	// Inicializo el MCP23018 de la placa analogica
+	// El modo 0 indica uso normal, el modo 1 uso por reconfiguracion por lo que el log es por D_DEBUG
 
 u08 data;
 size_t xReturn = 0U;
@@ -499,18 +537,18 @@ u08 xBytes = 0;
 	// GPINTEN: inputs interrupt on change.
 	// Habilito que DIN0/1 generen una interrupcion on-change.
 	// El portA no genera interrupciones
-	val = MCP1_GPINTENA;
-	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
-	data = 0;
-	xBytes = sizeof(data);
-	xReturn = FreeRTOS_write(&pdI2C, &data, xBytes);
+//	val = MCP1_GPINTENA;
+//	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
+//	data = 0;
+//	xBytes = sizeof(data);
+//	xReturn = FreeRTOS_write(&pdI2C, &data, xBytes);
 	//data = 0x60; // 0110 0000
 	//data |= ( BV(MCP1_GPIO_DIN0) | BV(MCP1_GPIO_DIN1) );
-	val = MCP1_GPINTENB;
-	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
-	data = 0;
-	xBytes = sizeof(data);
-	xReturn = FreeRTOS_write(&pdI2C, &data, xBytes);
+//	val = MCP1_GPINTENB;
+//	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
+//	data = 0;
+//	xBytes = sizeof(data);
+//	xReturn = FreeRTOS_write(&pdI2C, &data, xBytes);
 	//
 	// DEFVALB: valores por defecto para comparar e interrumpir
 	//data = 0;
@@ -519,23 +557,28 @@ u08 xBytes = 0;
 	// INTCON: controlo como comparo para generar la interrupcion.
 	// Con 1, comparo contra el valor fijado en DEFVAL
 	// Con 0 vs. su valor anterior.
-	val = MCP1_INTCONB;
-	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
+//	val = MCP1_INTCONB;
+//	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
 	//data |= ( BV(MCP1_GPIO_DIN0) | BV(MCP1_GPIO_DIN1) );
-	data = 0;
-	xBytes = sizeof(data);
-	xReturn = FreeRTOS_write(&pdI2C, &data, xBytes);
+//	data = 0;
+//	xBytes = sizeof(data);
+//	xReturn = FreeRTOS_write(&pdI2C, &data, xBytes);
 	// Borro interrupciones pendientes
-	val = MCP1_INTCAPB;
-	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
-	data = 0;
-	xBytes = sizeof(data);
-	xReturn = FreeRTOS_write(&pdI2C, &data, xBytes);
+//	val = MCP1_INTCAPB;
+//	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
+//	data = 0;
+//	xBytes = sizeof(data);
+//	xReturn = FreeRTOS_write(&pdI2C, &data, xBytes);
 
 	// libero el semaforo.
 	FreeRTOS_ioctl(&pdI2C,ioctlRELEASE_BUS_SEMPH, NULL);
 
-	FreeRTOS_write( &pdUART1, "MCP1 init OK\r\n\0", sizeof("MCP1 init OK\r\n\0") );
-
+	if ( modo == 0 ) {
+		FreeRTOS_write( &pdUART1, "MCP1 init OK\r\n\0", sizeof("MCP1 init OK\r\n\0") );
+	} else {
+		snprintf_P( debug_printfBuff,sizeof(debug_printfBuff),PSTR("**DEBUG:: MCP1 init !!\r\n\0"));
+		u_debugPrint(D_DEBUG, debug_printfBuff, sizeof(debug_printfBuff) );
+	}
 }
-//------------------------------------------------------------------------------------
+
+
