@@ -360,7 +360,6 @@ static int trD02(void)
 		u_debugPrint(D_DEBUG, aIn_printfBuff, sizeof(aIn_printfBuff) );
 	}
 
-
 	pv_AINprintExitMsg(2);
 	return(tkdST_PWRSETTLE);
 }

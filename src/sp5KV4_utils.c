@@ -493,6 +493,9 @@ void u_setConsignaDiurna ( void )
 	// Para abrir una valvula debemos poner una fase 10.
 	// Para cerrar es 01
 
+	// Por las dudas, reconfiguro el MCP
+	pvMCP_init_MCP1(1);
+
 	 MCP_outsPulse( systemVars.consigna.chVA , 1, 100 );	// Cierro la valvula 1
 	 vTaskDelay( ( TickType_t)( 1000 / portTICK_RATE_MS ) );
 	 MCP_outsPulse( systemVars.consigna.chVB , 0, 100 );	// Abro la valvula 2
@@ -512,6 +515,9 @@ void u_setConsignaNocturna ( void )
 {
 	// Abro la valvula 1
 	// Cierro la valvula 2
+
+	// Por las dudas, reconfiguro el MCP
+	pvMCP_init_MCP1(1);
 
 	 MCP_outsPulse( systemVars.consigna.chVA , 0, 100 );	// Abro la valvula 1
 	 vTaskDelay( ( TickType_t)( 1000 / portTICK_RATE_MS ) );

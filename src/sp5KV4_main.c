@@ -33,6 +33,8 @@
  * Como la medida de los sensores se hace en 4 pasos, si el primero ( tr05) da error ( por estar apagado el ADC ),
  * puedo corregirlo y prenderlo.
  *
+ * V4.1.0:
+ * Modifico el manejo de consignas para incorporar una FSM
  * El mismo problema de desconfiguracion puede ocurrir al setear las consignas.
  * Para esto entonces fijo que para setear las consignas el modem deba estar apagado.
  * La tarea tkConsignas consulta el estado del modem con u_modemPwrStatus()
