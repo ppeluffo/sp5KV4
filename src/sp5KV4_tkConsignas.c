@@ -209,7 +209,7 @@ uint32_t ulNotifiedValue;
  {
  	tickCount = xTaskGetTickCount();
  	snprintf_P( cons_printfBuff,sizeof(cons_printfBuff),PSTR(".[%06lu] tkConsignas::exit TR%02d\r\n\0"), tickCount,code);
- 	u_debugPrint(D_BASIC, cons_printfBuff, sizeof(cons_printfBuff) );
+ 	u_debugPrint(D_CONSIGNA, cons_printfBuff, sizeof(cons_printfBuff) );
  }
 /*------------------------------------------------------------------------------------*/
 static int trC00(void)

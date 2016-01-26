@@ -252,7 +252,7 @@ systemVarsType systemVars,tmpSV;
 #define Q1_CTL_PIN	3
 
 // DEBUG
-typedef enum { D_NONE = 0, D_BASIC = 1, D_DATA = 2, D_GPRS = 4, D_MEM = 8, D_DIGITAL = 16, D_EVENTOS = 32, D_DEBUG = 64 } t_debug;
+typedef enum { D_NONE = 0, D_BASIC = 1, D_DATA = 2, D_GPRS = 4, D_MEM = 8, D_DIGITAL = 16, D_CONSIGNA = 32, D_DEBUG = 64 } t_debug;
 typedef enum { M_OFF, M_OFF_IDLE, M_ON_CONFIG, M_ON_READY } t_modemStatus;
 typedef enum { OFF = 0, ON = 1 } t_onOff;
 typedef enum { T_APAGADA = 0, T_PRENDIDA = 1 } t_terminalStatus;

@@ -132,7 +132,7 @@ static void cmdHelpFunction(void)
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  pwrsave [modo {on|off}, {hhmm1}, {hhmm2}\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
-	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  debuglevel +/-{none,basic,mem,eventos,data,gprs,digital,all} \r\n\0"));
+	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  debuglevel +/-{none,basic,mem,consigna,data,gprs,digital,all} \r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  loglevel (none, info, all)\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
@@ -402,7 +402,7 @@ StatBuffer_t pxFFStatBuffer;
 		if ( (systemVars.debugLevel & D_DATA) != 0) { pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("+data")); }
 		if ( (systemVars.debugLevel & D_GPRS) != 0) { pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("+gprs")); }
 		if ( (systemVars.debugLevel & D_MEM) != 0)   { pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("+mem")); }
-		if ( (systemVars.debugLevel & D_EVENTOS) != 0)   { pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("+ev")); }
+		if ( (systemVars.debugLevel & D_CONSIGNA) != 0)   { pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("+cons")); }
 		if ( (systemVars.debugLevel & D_DIGITAL) != 0)  { pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("+digital")); }
 		if ( (systemVars.debugLevel & D_DEBUG) != 0)  { pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("+debug")); }
 	}
@@ -1124,14 +1124,14 @@ s08 pv_cmdWrDebugLevel(char *s)
 		}
 	}
 
-	if ((!strcmp_P( strupr(s), PSTR("+EVENTOS")))) {
-		systemVars.debugLevel += D_EVENTOS;
+	if ((!strcmp_P( strupr(s), PSTR("+CONSIGNA")))) {
+		systemVars.debugLevel += D_CONSIGNA;
 		return(TRUE);
 	}
 
-	if ((!strcmp_P( strupr(s), PSTR("-EVENTOS")))) {
-		if ( ( systemVars.debugLevel & D_EVENTOS) != 0 ) {
-			systemVars.debugLevel -= D_EVENTOS;
+	if ((!strcmp_P( strupr(s), PSTR("-CONSIGNA")))) {
+		if ( ( systemVars.debugLevel & D_CONSIGNA) != 0 ) {
+			systemVars.debugLevel -= D_CONSIGNA;
 			return(TRUE);
 		}
 	}
@@ -1171,7 +1171,7 @@ s08 pv_cmdWrDebugLevel(char *s)
 		}
 	}
 	if ((!strcmp_P( strupr(s), PSTR("ALL")))) {
-		systemVars.debugLevel = D_DATA + D_GPRS + D_MEM + D_DIGITAL + D_EVENTOS;
+		systemVars.debugLevel = D_DATA + D_GPRS + D_MEM + D_DIGITAL + D_CONSIGNA + D_DEBUG;
 		return(TRUE);
 	}
 
