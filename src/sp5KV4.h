@@ -54,8 +54,8 @@
 
 // DEFINICION DEL TIPO DE SISTEMA
 //----------------------------------------------------------------------------
-#define SP5K_REV "4.1.0"
-#define SP5K_DATE "@ 20160122"
+#define SP5K_REV "4.1.1"
+#define SP5K_DATE "@ 20160202"
 
 #define SP5K_MODELO "sp5KV3 HW:avr1284P R5.0"
 #define SP5K_VERSION "FW:FRTOS8"
@@ -221,6 +221,8 @@ typedef struct {
 
 	// Configuracion de canales digitales
 	double magPP[2];
+
+	s08 roaming;
 
 	consigna_t consigna;
 

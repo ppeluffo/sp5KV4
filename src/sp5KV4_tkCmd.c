@@ -140,7 +140,7 @@ static void cmdHelpFunction(void)
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  D{0..1} dname magp\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
-	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  apn, port, ip, script, passwd\r\n\0"));
+	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  apn, roaming {on|off}, port, ip, script, passwd\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  consigna {on|off} hhmm1,hhmm2,chVA,chVB \r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
@@ -312,6 +312,14 @@ StatBuffer_t pxFFStatBuffer;
 		break;
 	}
 	pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("\r\n\0"));
+	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
+
+	/* ROAMING */
+	if ( systemVars.roaming == TRUE ) {
+		snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  roaming ON\r\n\0"));
+	} else {
+		snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  roaming OFF\r\n\0"));
+	}
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 
 	/* DLGIP */
@@ -520,7 +528,7 @@ char *p;
  	}
 
 	// DEFAULT
-	if (!strcmp_P( strupr(argv[1]), PSTR("DEFAULT\0"))) {
+	if (!strcmp_P( strupr(argv[1]), PSTR("DEFAULTS\0"))) {
 		u_loadDefaults();
 		return;
 	}
@@ -606,6 +614,14 @@ u08 argc;
 			retS = TRUE;
 		}
 		retS ? pv_snprintfP_OK() : 	pv_snprintfP_ERR();
+		return;
+	}
+
+	// ROAMING
+	if (!strcmp_P( strupr(argv[1]), PSTR("ROAMING\0"))) {
+		if (!strcmp_P( strupr(argv[2]), PSTR("ON"))) { systemVars.roaming = TRUE; }
+		if (!strcmp_P( strupr(argv[2]), PSTR("OFF"))) { systemVars.roaming = FALSE; }
+		pv_snprintfP_OK();
 		return;
 	}
 

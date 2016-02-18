@@ -1367,10 +1367,17 @@ static int gTR_n03(void)
 
 size_t pos;
 
-	// Leo y Evaluo la respuesta al comando AT+CREG ( home network, NOT roaming !!! )
+	// Leo y Evaluo la respuesta al comando AT+CREG ( home network )
 	if ( pv_GPRSstrstr("+CREG: 0,1\0", &pos ) == TRUE ) {
 		GPRSrsp = RSP_CREG;
 	}
+	//( roaming !!!. Se usa en Concordia )
+	if ( systemVars.roaming == TRUE ) {
+		if ( pv_GPRSstrstr("+CREG: 0,5\0", &pos ) == TRUE ) {
+			GPRSrsp = RSP_CREG;
+		}
+	}
+
 	pv_GPRSprintRxBuffer();
 
 	pv_GPRSprintExitMsg("n03\0");

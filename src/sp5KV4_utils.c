@@ -379,6 +379,7 @@ u08 channel;
 	systemVars.pwrMode = PWR_DISCRETO;
 
 	strncpy_P(systemVars.apn, PSTR("SPYMOVIL.VPNANTEL\0"),APN_LENGTH);
+	systemVars.roaming = FALSE;
 
 	// DEBUG
 	systemVars.debugLevel = D_BASIC;
