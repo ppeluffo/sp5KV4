@@ -81,6 +81,12 @@ size_t xReturn = 0U;
 
 	// Recorro toda la memoria EE buscando transiciones.
 	for ( xPos=0; xPos < FF_MAX_RCDS; xPos++) {
+
+		// Para no salir por wdg reset
+		if ( (xPos % 128) == 0 ) {
+			wdt_reset();
+		}
+
 		val = FF_ADDR_START + xPos * FF_RECD_SIZE;
 		FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
 		// leo una pagina entera, (recd) 64 bytes.
@@ -460,7 +466,6 @@ u16 tryes;
 u16 xPos;
 
 	wdt_reset();
-	wdt_disable();
 
 	// Lo primero es obtener el semaforo del I2C
 	FreeRTOS_ioctl(&pdI2C,ioctlOBTAIN_BUS_SEMPH, NULL);
@@ -499,12 +504,17 @@ u16 xPos;
 		if ( (xPos % 32) == 0 ) {
 			FreeRTOS_write( &pdUART1, ".\0", sizeof(".\0") );
 		}
+
+		// Para no salir por wdg reset
+		if ( (xPos % 64) == 0 ) {
+			wdt_reset();
+		}
 	}
+
 	FreeRTOS_write( &pdUART1, "\r\n\0", sizeof("\r\n\0") );
 	FreeRTOS_ioctl(&pdI2C,ioctlRELEASE_BUS_SEMPH, NULL);
 	// RESET
-	wdt_enable(WDTO_30MS);
-	while(1) {}
+	u_reset();
 
 }
 //------------------------------------------------------------------------------------

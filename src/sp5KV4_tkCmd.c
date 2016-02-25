@@ -18,7 +18,6 @@ static void pv_snprintfP_ERR(void);
 static u08 pv_makeArgv(void);
 
 void pv_cmdRdRTC(void);
-void pv_cmdRdDCD(void);
 void pv_cmdRdEE(void);
 void pv_cmdRdADC(void);
 void pv_cmdRdMCP(void);
@@ -195,8 +194,8 @@ static void cmdResetFunction(void)
 	}
 
 	cmdClearScreen();
-	wdt_enable(WDTO_30MS);
-	while(1) {}
+	// RESET
+	u_reset();
 
 }
 /*------------------------------------------------------------------------------------*/
@@ -242,9 +241,6 @@ StatBuffer_t pxFFStatBuffer;
 	}
 	pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR(" )\r\n\0"));
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
-
-//	pos = snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("dStatus(%d): rc[0x%X], mc[0x%X],aCP[%d]\r\n\0"), wdgStatusEE.securityFlag, wdgStatusEE.resetCause, wdgStatusEE.mcusr, wdgStatusEE.analogCP );
-//	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 
 	/* DlgId */
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("dlgid: %s\r\n\0"), systemVars.dlgId );
@@ -330,11 +326,9 @@ StatBuffer_t pxFFStatBuffer;
 	snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  signalQ: csq=%d, dBm=%d\r\n\0"), systemVars.csq, systemVars.dbm );
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
 
-	// DCD/RI/TERMFLAG
-	if ( systemVars.dcd == 0 ) { pos = snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  pines: dcd=ON,\0")); }
-	if ( systemVars.dcd == 1 ) { pos = snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  pines: dcd=OFF,\0"));}
-	if ( systemVars.ri == 0 ) { pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("ri=ON,\0")); }
- 	if ( systemVars.ri == 1 ) { pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("ri=OFF,\0"));}
+	// RI/TERMFLAG
+	if ( systemVars.ri == 0 ) { pos = snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  ri=ON,\0")); }
+ 	if ( systemVars.ri == 1 ) { pos = snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("  ri=OFF,\0"));}
  	if ( systemVars.termsw == 1 ) { pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("term=ON\r\n\0")); }
  	if ( systemVars.termsw == 0 ) { pos += snprintf_P( &cmd_printfBuff[pos],sizeof(cmd_printfBuff),PSTR("term=OFF\r\n\0"));}
 	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
@@ -501,12 +495,6 @@ char *p;
 		return;
 	}
 
-	// DCD
-	if (!strcmp_P( strupr(argv[1]), PSTR("DCD\0"))) {
-		pv_cmdRdDCD();
-		return;
-	}
-
 	// MCP
 	// read mcp 0|1|2 addr
 	if (!strcmp_P( strupr(argv[1]), PSTR("MCP\0"))) {
@@ -595,9 +583,12 @@ u08 argc;
 		if ( argv[2] == NULL ) {
 			retS = FALSE;
 		} else {
+//			while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 1 ) != pdTRUE )
+//				taskYIELD();
 			memcpy(systemVars.dlgId, argv[2], sizeof(systemVars.dlgId));
 			systemVars.dlgId[DLGID_LENGTH - 1] = '\0';
 			retS = TRUE;
+//			xSemaphoreGive( sem_SYSVars );
 		}
 		retS ? pv_snprintfP_OK() : 	pv_snprintfP_ERR();
 		return;
@@ -1205,24 +1196,6 @@ u08 pos;
 		pos = snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("OK\r\n"));
 		pos += snprintf_P( &cmd_printfBuff[pos],(sizeof(cmd_printfBuff) - pos ),PSTR("%02d/%02d/%04d "),rtcDateTime.day,rtcDateTime.month, rtcDateTime.year );
 		pos += snprintf_P( &cmd_printfBuff[pos],(sizeof(cmd_printfBuff) - pos ),PSTR("%02d:%02d:%02d\r\n\0"),rtcDateTime.hour,rtcDateTime.min, rtcDateTime.sec );
-	} else {
-		snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("ERROR\r\n\0"));
-	}
-	FreeRTOS_write( &pdUART1, cmd_printfBuff, sizeof(cmd_printfBuff) );
-	return;
-}
-/*------------------------------------------------------------------------------------*/
-void pv_cmdRdDCD(void)
-{
-u08 pin;
-s08 retS = FALSE;
-u08 pos;
-
-	retS = u_readDCD(&pin);
-	if (retS ) {
-		pos = snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("OK\r\n"));
-		if ( pin == 1 ) { pos += snprintf_P( &cmd_printfBuff[pos],(sizeof(cmd_printfBuff) - pos),PSTR("DCD ON(1)\r\n\0")); }
-		if ( pin == 0 ) { pos += snprintf_P( &cmd_printfBuff[pos],(sizeof(cmd_printfBuff) - pos),PSTR("DCD OFF(0)\r\n\0")); }
 	} else {
 		snprintf_P( cmd_printfBuff,sizeof(cmd_printfBuff),PSTR("ERROR\r\n\0"));
 	}

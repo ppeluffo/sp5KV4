@@ -16,6 +16,21 @@
  *
  * !! Agregar el salir automaticamente luego de 30 mins del modo service.
  *
+ * V4.1.2:
+ * - Modifico la inicializacion de WDT siguiendo las recomendaciones de Atmel y verifico el
+ *   funcionamiento de c/wdg.
+ *   http://www.atmel.com/webdoc/AVRLibcReferenceManual/FAQ_1faq_softreset.html
+ *   http://www.nongnu.org/avr-libc/user-manual/group__avr__watchdog.html
+ * - El WDT se prende por fuses grabandolos en 0xFF(low), 0xC9(high), 0xFD(extended)
+ *   Esto me asegura que no se van a borrar por hw.
+ * - Borro todo lo referente a DCD ya que no lo uso.
+ * - Agrego a tkAnalog una funcion que chequea la consistencia de los timers en c/ciclo y si estan
+ *   mal resetea al uC
+ * - Idem en tkGprs.
+ * - Tambien controlo no exceder 12hs sin discar.
+ * - Elimino el control del pin de la terminal de tkDigital y lo dejo todo en tkControl.
+ *
+ *
  * V4.0.9:
  * El problema es que el ADC no se prende y la lectura de los canales es erronea.
  * La razon es que el MCP se resetea a default y por lo tanto no prende los sensores ni los 3.3V.
@@ -46,44 +61,60 @@
 
 static void pv_initMPU(void);
 
+//----------------------------------------------------------------------------------------
+// http://www.atmel.com/webdoc/AVRLibcReferenceManual/FAQ_1faq_softreset.html
+// http://www.nongnu.org/avr-libc/user-manual/group__avr__watchdog.html
+//
+// Function Pototype
+uint8_t mcusr_mirror __attribute__ ((section (".noinit")));
+void wdt_init(void) __attribute__((naked)) __attribute__((section(".init3")));
+
+// Function Implementation
+void wdt_init(void)
+{
+	// Leo el MCUSR para saber cual fue la causa del reset
+	mcusr_mirror = MCUSR;
+	// e inmediatamente lo pongo en 0 por si se resetea saber la causa
+    MCUSR = 0;
+    // y deshabilito el wdg para dejar que el micro arranque y no quede en un loop de resets
+    //  wdt_disable();
+    // Como los fusibles estan para que el WDG siempre este prendido, lo reconfiguro a 8s lo
+    // antes posible
+    wdt_enable(WDTO_8S);
+    return;
+}
 //------------------------------------------------------------------------------------
+
 int main(void)
 {
 unsigned int i,j;
-
 
 	//----------------------------------------------------------------------------------------
 	// Rutina NECESARIA para que al retornar de un reset por WDG no quede en infinitos resets.
 	// Copiado de la hoja de datos.
 
 	// Lo primero que hago es leer la causa del reset para luego trasmitirla en un init.
-	wdgStatus.resetCause = MCUSR;
+	// Inicializamos el watchdog
+//	cli();
+	// Leo el MCUSR para saber cual fue la causa del reset
+//	wdgStatus.resetCause = MCUSR;
+	// e inmediatamente lo pongo en 0 por si se resetea saber la causa
+//	MCUSR = 0;
+	// y deshabilito el wdg para dejar que el micro arranque y no quede en un loop de resets
+//	wdt_disable();
+//	wdt_reset();
+//	sei();
 
-	cli();
-	wdt_reset();
-
-	//MCUSR &= ~(1<<WDRF);
-	MCUSR = 0x00;
-	/* Write logical one to WDCE and WDE */
-	/* Keep old prescaler setting to prevent unintentional time-out */
-	WDTCSR |= (1<<WDCE) | (1<<WDE);
-	/* Turn off WDT */
-	WDTCSR = 0x00;
-	sei();
-
+	wdgStatus.resetCause = mcusr_mirror;
 	// Genero un delay de 1s. para permitir que el micro se estabilize.
 	// Lleva tiempo a los osciladores estabilizarse.
 	for (i=0; i<1000; i++)
 		for (j=0; j<1000; j++)
 				;
 
-	// Leo el estado anterior al reset.
-//	eeprom_read_block((u08 *)&wdgStatusEE, (uint8_t *) EEADDR_WDG, sizeof( wdgStatus ));
-	// y borro la flag.
-//	eeprom_write_byte( (uint8_t *)( EEADDR_WDG + sizeof( wdgStatus ) - 1), 0 );
-
 	//----------------------------------------------------------------------------------------
 
+	wdt_reset();
 	pv_initMPU();
 	FreeRTOS_open(pUART0, ( UART_RXFIFO + UART_TXQUEUE ));
 	FreeRTOS_open(pUART1, ( UART_RXFIFO + UART_TXQUEUE ));
@@ -110,6 +141,8 @@ unsigned int i,j;
 	xTaskCreate(tkConsignas, "CONS", tkCons_STACK_SIZE, NULL, tkCons_TASK_PRIORITY,  &xHandle_tkConsignas);
 	xTaskCreate(tkGprsRx, "GPRX", tkGprsRx_STACK_SIZE, NULL, tkGprsRx_TASK_PRIORITY,  &xHandle_tkGprsRx);
 
+	systemWdg = WDG_CTL + WDG_CMD + WDG_CSG + WDG_DIN + WDG_AIN + WDG_GPRS + WDG_GPRSRX;
+
 	/* Arranco el RTOS. */
 	vTaskStartScheduler();
 
@@ -133,7 +166,12 @@ static void pv_initMPU(void)
 	// El pin de DCD es entrada
 	cbi(DCD_DDR, DCD_BIT);
 
-	// Leo la configuracion de la EEprom interna
+	// Leds
+	sbi(LED_KA_DDR, LED_KA_BIT);		// El pin del led de KA ( PD6 ) es una salida.
+	sbi(LED_MODEM_DDR, LED_MODEM_BIT);	// El pin del led de KA ( PD6 ) es una salida.
+	// inicialmente los led quedan en 0
+	sbi(LED_KA_PORT, LED_KA_BIT);
+	sbi(LED_MODEM_PORT, LED_MODEM_BIT);
 
 	// Configuro el modo de Sleep.
 	set_sleep_mode(SLEEP_MODE_PWR_SAVE);
@@ -151,21 +189,4 @@ void vApplicationIdleHook( void )
 	}
 
 }
-/*------------------------------------------------------------------------------------*/
-//ISR( WDT_vect )
-//{
-/* Handler (ISR) de WDG.
- * Guarda el estado del sistema para que al reiniciarse se mande por INIT frame
-*/
-
-//	 wdgStatus.mcusr = MCUSR;
-//	 wdgStatus.securityFlag = 'A';
-
-	 // Salvo el estado
-//	 eeprom_write_block( (u08 *)&wdgStatus, (uint8_t *) EEADDR_WDG, sizeof( wdgStatus ));
-//	 // Y me reseteo.
-//	 wdt_enable(WDTO_1S);
-//	 while(1) {}
-//}
-
 /*------------------------------------------------------------------------------------*/

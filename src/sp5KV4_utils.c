@@ -258,7 +258,6 @@ int i;
 	strncpy_P(systemVars.dlgIp, PSTR("000.000.000.000\0"),16);
 	systemVars.csq = 0;
 	systemVars.dbm = 0;
-	systemVars.dcd = 0;
 	systemVars.ri = 0;
 	//systemVars.debugLevel = D_BASIC;
 	systemVars.wrkMode = WK_NORMAL;
@@ -373,7 +372,6 @@ u08 channel;
 	systemVars.csq = 0;
 	systemVars.dbm = 0;
 	systemVars.gsmBand = 8;
-	systemVars.dcd = 0;
 	systemVars.ri = 0;
 	systemVars.wrkMode = WK_NORMAL;
 	systemVars.pwrMode = PWR_DISCRETO;
@@ -477,14 +475,6 @@ s08 u_readTermsw(u08 *pin)
 
 }
 //------------------------------------------------------------------------------------
-s08 u_readDCD(u08 *pin)
-{
-	// El DCD se cablea a PB3.
-	*pin = ( DCD_PIN & _BV(3) ) >> 3;
-	return(TRUE);
-
-}
-//------------------------------------------------------------------------------------
 void u_setConsignaDiurna ( void )
 {
 	// Una consigna es la activacion simultanea de 2 valvulas, en las cuales un
@@ -542,5 +532,11 @@ void u_debugPrint(u08 debugCode, char *msg, u16 size)
 	if ( (systemVars.debugLevel & debugCode) != 0) {
 		FreeRTOS_write( &pdUART1, msg, size );
 	}
+}
+//------------------------------------------------------------------------------------
+void u_reset(void)
+{
+	wdt_enable(WDTO_30MS);
+	while(1) {}
 }
 //------------------------------------------------------------------------------------

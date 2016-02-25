@@ -51,6 +51,8 @@ static u08 pv_GPRSprocessAch(u08 channel);
 static u08 pv_GPRSprocessDch(u08 channel);
 static u08 pv_GPRSprocessConsignas(void);
 
+static void pv_GPRScheckLocalTimers(void);
+
 // Estados
 typedef enum { gST_INIT = 0,
 				gST_OFF,
@@ -368,12 +370,6 @@ size_t pos;
 
 		if ( GPRS_flags.modemPwrStatus == PRENDIDO ) {
 
-			// Siempre que DCD = 1, el socket esta cerrado. Puede que no lo detecte, en dicho
-			// caso uso el sistema de respuestas del modem
-			//if ( systemVars.dcd == 1 ) {
-			//	GPRS_flags.socketStatus = SOCKET_CLOSED;
-			//}
-
 			// el read se bloquea 50ms. lo que genera la espera.
 			while ( FreeRTOS_read( &pdUART0, &c, 1 ) == 1 ) {
 				gprsRx.buffer[gprsRx.ptr] = c;
@@ -516,7 +512,6 @@ s08 retS = FALSE;
 
 }
 //------------------------------------------------------------------------------------
-
 void tkGprs(void * pvParameters)
 {
 
@@ -544,6 +539,8 @@ uint32_t ulNotifiedValue;
 	for( ;; )
 	{
 		u_clearWdg(WDG_GPRS);
+
+		pv_GPRScheckLocalTimers();
 
 		// Espero hasta 100ms por un mensaje.
 		xResult = xTaskNotifyWait( 0x00, ULONG_MAX, &ulNotifiedValue, ((TickType_t) 100 / portTICK_RATE_MS ) );
@@ -598,6 +595,51 @@ uint32_t ulNotifiedValue;
 
 	}
 }
+//------------------------------------------------------------------------------------
+static void pv_GPRScheckLocalTimers(void)
+{
+	// Controlo los timers
+	if ( GPRS_counters.cTimer < -1 ) {
+		snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("tkGPRS LTR cTimer = %d\r\n\0"), GPRS_counters.cTimer);
+		goto quit;
+	}
+	if ( GPRS_counters.pTryes < -1 ) {
+		snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("tkGPRS LTR pTryes = %d\r\n\0"), GPRS_counters.pTryes);
+		goto quit;
+	}
+	if ( GPRS_counters.qTryes < -1 ) {
+		snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("tkGPRS LTR qTryes = %d\r\n\0"), GPRS_counters.qTryes);
+		goto quit;
+	}
+	if ( GPRS_counters.secs2dial < -1 ) {
+		snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("tkGPRS LTR secs2dial = %d\r\n\0"), GPRS_counters.secs2dial);
+		goto quit;
+	}
+	// Controlo no exceder las 12hs sin discar
+	if ( GPRS_counters.secs2dial > 43200 ) {
+		snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("tkGPRS LTR secs2dial = %d\r\n\0"), GPRS_counters.secs2dial);
+		goto quit;
+	}
+	if ( GPRS_counters.cInits < -1 ) {
+		snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("tkGPRS LTR cInits = %d\r\n\0"), GPRS_counters.cInits);
+		goto quit;
+	}
+	if ( GPRS_counters.txRcdsInWindow < -1 ) {
+		snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("tkGPRS LTR txRcdsInWindow = %d\r\n\0"), GPRS_counters.txRcdsInWindow);
+		goto quit;
+	}
+	if ( GPRS_counters.cLote < -1 ) {
+		snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("tkGPRS LTR cLote = %d\r\n\0"), GPRS_counters.cLote);
+		goto quit;
+	}
+
+	return;
+
+quit:
+	FreeRTOS_write( &pdUART1, gprs_printfBuff, sizeof(gprs_printfBuff) );
+	u_reset();
+}
+
 //------------------------------------------------------------------------------------
 static void GPRS_getNextEvent(u08 state)
 {
@@ -2783,9 +2825,8 @@ size_t pos = 0;
 		snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("Config RESET...\r\n\0" ));
 		FreeRTOS_write( &pdUART1, gprs_printfBuff, sizeof(gprs_printfBuff) );
 		vTaskDelay( ( TickType_t)( 1000 / portTICK_RATE_MS ) );
-
-		wdt_enable(WDTO_30MS);
-		while(1) {}
+		// RESET
+		u_reset();
 	}
 
 	pv_GPRSprintExitMsg("d16\0");

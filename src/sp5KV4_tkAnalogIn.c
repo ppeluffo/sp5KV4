@@ -57,13 +57,13 @@ static struct {
 } AN_flags;
 
 #define CICLOS_POLEO		3		// ciclos de poleo para promediar.
-#define SECS2PWRSETTLE 		5
+#define SECS2PWRSETTLE 		2
 #define MAX_ERRORS			90		// maximo nro.poleos con error para resetear el micro.( equivale a 30 mins. )
 
 static struct {
-	u08 secs2pwrSettle;		// contador de segundos para que se estabilize la fuente
-	u16 secs2poll;			// contador de segundos hasta el siguiente poleo ( habilitacion de la flag )
-	u08 nroPoleos;			// Contador del nro de poleos
+	s08 secs2pwrSettle;		// contador de segundos para que se estabilize la fuente
+	s16 secs2poll;			// contador de segundos hasta el siguiente poleo ( habilitacion de la flag )
+	s08 nroPoleos;			// Contador del nro de poleos
 } AN_counters;
 
 // Funciones generales
@@ -72,6 +72,7 @@ static void pv_AINfsm(void);
 static void pv_AINprintExitMsg(u08 code);
 static void pv_AinLoadParameters( void );
 void pv_pollTimerCallback( TimerHandle_t pxTimer );
+static void pv_AINcheckLocalTimers(void);
 
 void catch_I2C_Error( u08 channel );
 
@@ -109,8 +110,9 @@ uint32_t ulNotifiedValue;
 	for( ;; )
 	{
 
-		wdgStatus.analogCP = 1;
 		u_clearWdg(WDG_AIN);
+
+		pv_AINcheckLocalTimers();
 
 		// Espero hasta 100ms por un mensaje.
 		xResult = xTaskNotifyWait( 0x00, ULONG_MAX, &ulNotifiedValue, ((TickType_t) 100 / portTICK_RATE_MS ) );
@@ -136,11 +138,36 @@ uint32_t ulNotifiedValue;
 		if ( rdErrors >= MAX_ERRORS ) {
 			snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("%s Reset por I2C errors !!!\r\n\0"), u_now() );
 			u_debugPrint(D_BASIC, aIn_printfBuff, sizeof(aIn_printfBuff) );
-			wdt_enable(WDTO_30MS);
-			while(1) {}
+			// RESET
+			u_reset();
 		}
 	}
 
+}
+/*------------------------------------------------------------------------------------*/
+static void pv_AINcheckLocalTimers(void)
+{
+	// Controlo los timers
+	if ( AN_counters.secs2pwrSettle < -1 ) {
+		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("tkAnalogIn LTR secs2pwrSettle = %d\r\n\0"), AN_counters.secs2pwrSettle);
+		goto quit;
+	}
+
+	if ( AN_counters.secs2poll < -1 ) {
+		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("tkAnalogIn LTR secs2poll = %d\r\n\0"), AN_counters.secs2poll);
+		goto quit;
+	}
+
+	if ( AN_counters.nroPoleos < -1 ) {
+		snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("tkAnalogIn LTR nroPoleos = %d\r\n\0"), AN_counters.nroPoleos);
+		goto quit;
+	}
+
+	return;
+
+quit:
+	FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
+	u_reset();
 }
 /*------------------------------------------------------------------------------------*/
 void tkAnalogInit(void)
@@ -168,9 +195,6 @@ void pv_pollTimerCallback( TimerHandle_t pxTimer )
 {
 	// Como el timer esta en reload c/1 sec, aqui contamos los secs para polear
 	// en la variable secs2poll.
-
-	wdgStatus.analogCP = 2;
-
 	AN_counters.secs2poll--;
 
 	if ( AN_counters.secs2poll <= 0 ) {	 	// programacion defensiva: uso <=
@@ -197,8 +221,6 @@ static void pv_AINgetNextEvent(void)
 // Tenemos un array de eventos y todos se evaluan.
 
 u08 i;
-
-	wdgStatus.analogCP = 3;
 
 	// Inicializo la lista de eventos.
 	for ( i=0; i < dEVENT_COUNT; i++ ) {
@@ -229,7 +251,6 @@ static void pv_AINfsm(void)
 	// priorizar las transiciones.
 	// Luego de c/transicion debe venir un break así solo evaluo de a 1 transicion por loop.
 	//
-	wdgStatus.analogCP = 4;
 
 	switch ( tkAIN_state ) {
 	case tkdST_INIT:
@@ -272,8 +293,6 @@ static int trD00(void)
 	// Inicializo el sistema aqui
 	// tkdST_INIT->tkdST_STANDBY
 
-	wdgStatus.analogCP = 5;
-
 	// Init (load parameters) & start pollTimer
 	AN_flags.starting = FALSE;
 
@@ -302,8 +321,6 @@ static int trD01(void)
 {
 	// MSG de autoreload
 	// tkdST_STANDBY->tkdST_STANDBY
-
-	wdgStatus.analogCP = 6;
 
 	AN_flags.msgReload = FALSE;
 
@@ -341,8 +358,6 @@ static int trD02(void)
 		vTaskDelay( ( TickType_t)( 100 / portTICK_RATE_MS ) );
 	}
 
-	wdgStatus.analogCP = 7;
-
 	AN_flags.start2poll = FALSE;
 	// Inicialmente el frame esta bueno.
 	f_skipFrame = FALSE;
@@ -369,8 +384,6 @@ static int trD03(void)
 	// tkdST_PWRSETTLE->tkdST_PWRSETTLE
 	// Espero 5s. que se estabilizen las fuentes.
 
-	wdgStatus.analogCP = 8;
-
 	if ( AN_counters.secs2pwrSettle > 0 ) {
 		vTaskDelay( ( TickType_t)( 1000 / portTICK_RATE_MS ) );
 		AN_counters.secs2pwrSettle--;
@@ -383,8 +396,6 @@ static int trD03(void)
 static int trD04(void)
 {
 	// tkdST_PWRSETTLE->tkdST_POLLING
-
-	wdgStatus.analogCP = 9;
 
 	AN_counters.nroPoleos = CICLOS_POLEO;
 
@@ -408,8 +419,6 @@ static int trD05(void)
 
 u16 adcRetValue;
 s08 retS;
-
-	wdgStatus.analogCP = 10;
 
 	// Dummy convert para prender el ADC ( estabiliza la medida).
 	tickCount = xTaskGetTickCount();
@@ -481,8 +490,6 @@ u08 channel;
 u16 pos = 0;
 size_t bWrite;
 StatBuffer_t pxFFStatBuffer;
-
-	wdgStatus.analogCP = 11;
 
 	//  En modo discreto debo apagar sensores
 	if ( (systemVars.pwrMode == PWR_DISCRETO ) && ( systemVars.wrkMode == WK_NORMAL )) {
@@ -602,8 +609,6 @@ StatBuffer_t pxFFStatBuffer;
 
 	FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
 
-
-
 quit:
 
 	// Aqui termino un ciclo de poleo: indico a tkGprs que puede discar.
@@ -618,7 +623,6 @@ quit:
 /*------------------------------------------------------------------------------------*/
 static void pv_AINprintExitMsg(u08 code)
 {
-	wdgStatus.analogCP = 12;
 
 	tickCount = xTaskGetTickCount();
 	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR(".[%06lu] tkAnalogIn::exit TR%02d\r\n\0"), tickCount,code);
@@ -629,8 +633,6 @@ static void pv_AinLoadParameters( void )
 {
 	// Dependiendo del modo de trabajo normal, service, idle, monitor, setea el
 	// timer de poleo.
-
-	wdgStatus.analogCP = 13;
 
 	// Al comienzo poleo rapido aunque luego no lo salvo
 	if ( AN_flags.firstPoll == TRUE ) {
@@ -653,8 +655,6 @@ s16 u_readTimeToNextPoll(void)
 {
 s16 retVal = -1;
 
-	wdgStatus.analogCP = 14;
-
 	// Lo determina en base al time elapsed y el timerPoll.
 	// El -1 indica un modo en que no esta poleando.
 	if ( ( systemVars.wrkMode == WK_NORMAL ) || ( systemVars.wrkMode == WK_MONITOR_FRAME )) {
@@ -666,7 +666,6 @@ s16 retVal = -1;
 /*------------------------------------------------------------------------------------*/
 void u_readAnalogFrame (frameData_t *dFrame)
 {
-	wdgStatus.analogCP = 15;
 
 	memcpy(dFrame, &Aframe, sizeof(Aframe) );
 }

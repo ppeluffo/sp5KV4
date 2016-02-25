@@ -12,17 +12,15 @@
 
 static char ctl_printfBuff[CHAR128];
 
-void pv_ledsInit(void);
 void pv_flashLeds(void);
 void pv_wdgInit(void);
 void pv_checkWdg(void );
 void pv_checkTerminal(void);
+void pv_dailyReset(void);
+void pv_autoServiceExit(void);
 
 TimerHandle_t terminalTimer;
 void  pv_terminalTimerCallBack( TimerHandle_t pxTimer );
-
-TimerHandle_t oneMinTimer;
-void  pv_1MinTimerCallBack( TimerHandle_t pxTimer );
 
 s08 f_terminalPrendida;
 s08 f_terminalCallback;
@@ -40,8 +38,8 @@ StatBuffer_t pxFFStatBuffer;
 	vTaskDelay( ( TickType_t)( 500 / portTICK_RATE_MS ) );
 
 	MCP_init();			// Esto prende la terminal.
-	pv_ledsInit();
 	pv_wdgInit();
+
 	// inicializo la memoria EE ( fileSysyem)
 	ffRcd = FF_fopen();
 	FF_stat(&pxFFStatBuffer);
@@ -62,23 +60,11 @@ StatBuffer_t pxFFStatBuffer;
 	}
 	FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
 
-	// Arranco el timer que va a resetear a diario el dlg
-	if ( xTimerStart( oneMinTimer, 0 ) != pdPASS )
-		u_panic(P_CTL_TIMERSTART);
-
 	f_terminalPrendida = TRUE; 	// Se prende al inicializar el MCP.
 	f_terminalCallback = FALSE;
 	// Arranco el timer de control  de la terminal
 	if ( xTimerStart( terminalTimer, 0 ) != pdPASS )
 		u_panic(P_CTL_TIMERSTART);
-
-	// Inicializo el watchdog del micro.
-	wdt_enable(WDTO_8S);
-//	cli();
-	wdt_reset();
-//	WDTCSR |= (1<<WDCE) | (1<<WDE);
-//	WDTCSR = 0x61;
-//	sei();
 
 	 // Initialise the xLastWakeTime variable with the current time.
 	 xLastWakeTime = xTaskGetTickCount();
@@ -108,8 +94,64 @@ StatBuffer_t pxFFStatBuffer;
 		pv_flashLeds();
 		pv_checkWdg();
 		pv_checkTerminal();
+		pv_dailyReset();
+		pv_autoServiceExit();
 
 	}
+}
+//------------------------------------------------------------------------------------
+void pv_autoServiceExit(void)
+{
+	// Se invoca c/1 sec.
+	// Cuento hasta 60 para tener 1 minuto.
+	// Se usa para salir del modo service a los 30s.
+
+static s08 sCounter = 60;
+static s16 serviceModeCounter = T_EXITSERVICEMODE;
+
+	if ( sCounter-- > 0 )
+		return;
+
+	sCounter = 60;
+
+	// En modo service, a los 30 mins. me reseteo para salir solo
+	if ( systemVars.wrkMode != WK_NORMAL ) {
+
+		if ( serviceModeCounter-- <= 0 ) {
+
+			snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("Automatic exit of service mode..\r\n\0"));
+			FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
+			// RESET
+			u_reset();
+		}
+	} else {
+		// En WRK_NORMAL reseteo el timer.
+		serviceModeCounter = T_EXITSERVICEMODE;
+	}
+}
+//------------------------------------------------------------------------------------
+void pv_dailyReset(void)
+{
+	// Se invoca c/1 sec.
+	// Cuento hasta 60 para tener 1 minuto.
+	// Se usa para resetear el micro 1 vez al dia.
+
+static s08 rCounter = 60;
+static s16 resetCounter = T_DAILYRESET;
+
+	if ( rCounter-- > 0 )
+		return;
+
+	rCounter = 60;
+	if ( resetCounter-- > 0)
+		return;
+
+	// Una vez por dia me reseteo.
+	snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("Going to daily reset..\r\n\0"));
+	FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
+	// RESET
+	u_reset();
+
 }
 //------------------------------------------------------------------------------------
 void tkControlInit(void)
@@ -130,30 +172,6 @@ void tkControlInit(void)
 
 	if ( terminalTimer == NULL )
 		u_panic(P_CTL_TIMERCREATE);
-
-	oneMinTimer = xTimerCreate (  "1MIN_T",
-	                     /* The timer period in ticks, must be greater than 0. */
-	                     ( 60000 / portTICK_PERIOD_MS) ,
-	                     /* The timers will auto-reload themselves when they expire. */
-	                     pdTRUE,
-	                     /* Assign each timer a unique id equal to its array index. */
-	                     ( void * ) NULL,
-	                     /* Each timer calls the same callback when it expires. */
-						 pv_1MinTimerCallBack
-	                   );
-
-	if ( oneMinTimer == NULL )
-		u_panic(P_CTL_TIMERCREATE);
-}
-//------------------------------------------------------------------------------------
-void pv_ledsInit(void)
-{
-
-	sbi(LED_KA_DDR, LED_KA_BIT);		// El pin del led de KA ( PD6 ) es una salida.
-	sbi(LED_MODEM_DDR, LED_MODEM_BIT);	// El pin del led de KA ( PD6 ) es una salida.
-	// inicialmente los led quedan en 0
-	sbi(LED_KA_PORT, LED_KA_BIT);
-	sbi(LED_MODEM_PORT, LED_MODEM_BIT);
 
 }
 //------------------------------------------------------------------------------------
@@ -193,7 +211,6 @@ void pv_wdgInit(void)
 {
 u08 pos;
 
-	systemWdg = WDG_CTL + WDG_CMD + WDG_DIN + WDG_AIN + WDG_GPRS;
 	pos = snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("Watchdog init (0x%X"),wdgStatus.resetCause);
 	if (wdgStatus.resetCause & 0x01 ) {
 		pos += snprintf_P( &ctl_printfBuff[pos],sizeof(ctl_printfBuff),PSTR(" PORF"));
@@ -231,47 +248,18 @@ static u08 l_timer = 2;
 	}
 }
 //------------------------------------------------------------------------------------
-void  pv_1MinTimerCallBack( TimerHandle_t pxTimer )
-{
-	// Funcion de callback que se invoca 1 vez por minuto.
-	// Aqui controlo todas las cosas que quiero con 1m de granularidad del timer.
-
-	// Daily reset: una vez por dia me debo resetear ( 1440 mins )
-	// Si estoy en modo service, a los 30 mins debo resetearme.
-
-
-static s16 resetCounter = T_DAILYRESET;
-static s16 serviceModeCounter = T_EXITSERVICEMODE;
-
-	// Una vez por dia me reseteo.
-	if ( resetCounter-- <= 0 ) {
-
-		snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("Going to daily reset..\r\n\0"));
-		FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
-
-		wdt_enable(WDTO_30MS);
-		while(1) {}
-	}
-
-	// En modo service, a los 30 mins. me reseteo para salir solo
-	if ( systemVars.wrkMode != WK_NORMAL ) {
-
-		if ( serviceModeCounter-- <= 0 ) {
-
-			snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("Automatic exit of service mode..\r\n\0"));
-			FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
-
-			wdt_enable(WDTO_30MS);
-			while(1) {}
-		}
-
-	}
-}
-//------------------------------------------------------------------------------------
 void pv_checkTerminal(void)
 {
 
 static u08 l_termsw = 1; // Estado anterior del pin de la terminal
+u08 pin;
+
+
+	// Leo el estado del pin de la terminal
+	u_readTermsw(&pin);
+	if ( systemVars.termsw != pin ) {
+		systemVars.termsw = pin;
+	}
 
 	// Si estoy en modo CONTINUO no apago la terminal ni dejo de flashear los leds
 	if ( systemVars.pwrMode == PWR_CONTINUO) {

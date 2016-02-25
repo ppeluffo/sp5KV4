@@ -54,8 +54,8 @@
 
 // DEFINICION DEL TIPO DE SISTEMA
 //----------------------------------------------------------------------------
-#define SP5K_REV "4.1.1"
-#define SP5K_DATE "@ 20160202"
+#define SP5K_REV "4.1.2"
+#define SP5K_DATE "@ 20160225"
 
 #define SP5K_MODELO "sp5KV3 HW:avr1284P R5.0"
 #define SP5K_VERSION "FW:FRTOS8"
@@ -102,16 +102,9 @@ s08 startTask;
 typedef struct {
 	u08 resetCause;
 	u08 mcusr;
-	u08 analogCP;
-	u08 controlCP;
-	u08 digitalCP;
-	u08 gprsCP;
-	u08 securityFlag;
 } wdgStatus_t;
 
-wdgStatus_t wdgStatus, wdgStatusEE;
-
-#define EEADDR_WDG 16		// Direccion inicio de la EE de escritura del wdgStatus.
+wdgStatus_t wdgStatus;
 
 // Mensajes entre tareas
 #define TKA_PARAM_RELOAD		0x01	// to tkAnalogIN: reload
@@ -191,7 +184,6 @@ typedef struct {
 
 	u08 csq;
 	u08 dbm;
-	u08 dcd;
 	u08 ri;
 	u08 termsw;
 
@@ -281,7 +273,6 @@ void u_loadDefaults(void);
 char *u_now(void);
 s08 u_readTermsw(u08 *pin);
 void u_restartTimerTerminal(void);
-s08 u_readDCD(u08 *pin);
 
 char nowStr[32];
 
@@ -301,6 +292,8 @@ s08 u_wrRtc(char *s);
 
 void u_debugPrint(u08 debugCode, char *msg, u16 size);
 void pvMCP_init_MCP1(u08 modo);
+
+void u_reset(void);
 
 //------------------------------------------------------------------------------------
 // PANIC CODES
@@ -340,7 +333,7 @@ void terminal_restartTimer( u16 secs);	// Publica
 
 char debug_printfBuff[CHAR128];
 
-#define T_DAILYRESET		1440
+#define T_DAILYRESET		720
 #define T_EXITSERVICEMODE	30
 
 //------------------------------------------------------------------------------------

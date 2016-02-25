@@ -22,8 +22,6 @@
 
 static void pv_clearQ(void);
 static void pv_pollQ(void);
-static void pv_pollDcd(void);
-static void pv_pollTermsw(void);
 
 static char dIn_printfBuff[CHAR64];	// Buffer de impresion
 static dinData_t digIn;				// Estructura local donde cuento los pulsos.
@@ -40,12 +38,6 @@ void tkDigitalIn(void * pvParameters)
 BaseType_t xResult;
 uint32_t ulNotifiedValue;
 
-	// Los pines del micro que resetean los latches de caudal son salidas.
-	//sbi(Q_DDR, Q0_CTL_PIN);
-	//sbi(Q_DDR, Q1_CTL_PIN);
-
-	// El pin de control de la terminal es entrada
-	//cbi(TERMSW_DDR, TERMSW_BIT);
 
 	while ( !startTask )
 		vTaskDelay( ( TickType_t)( 100 / portTICK_RATE_MS ) );
@@ -59,9 +51,6 @@ uint32_t ulNotifiedValue;
 	digIn.level[1] = 0;
 	digIn.pulses[0] = 0;
 	digIn.pulses[1] = 0;
-
-	// Inicializo el valor del dcd.
-	u_readDCD(&systemVars.dcd);
 
 	D_flags.msgReload = FALSE;
 	D_flags.serviceMode = FALSE;
@@ -91,11 +80,8 @@ uint32_t ulNotifiedValue;
 		// Solo poleo las entradas en modo normal. En modo service no para
 		// poder manejarlas por los comandos de servicio.
 		if ( ! D_flags.serviceMode) {
-			pv_pollDcd();
 			pv_pollQ();
 		}
-
-		pv_pollTermsw();
 	}
 
 }
@@ -111,41 +97,6 @@ void u_readDigitalCounters( dinData_t *dIn , s08 resetCounters )
 		digIn.level[1] = 0;
 		digIn.pulses[0] = 0;
 		digIn.pulses[1] = 0;
-	}
-}
-/*------------------------------------------------------------------------------------*/
-static void pv_pollDcd(void)
-{
-s08 retS = FALSE;
-u08 pin;
-u32 tickCount;
-
-	retS = u_readDCD(&pin);
-	// Solo indico los cambios.
-	if ( systemVars.dcd != pin ) {
-		systemVars.dcd = pin;
-		tickCount = xTaskGetTickCount();
-		if ( pin == 1 ) { snprintf_P( dIn_printfBuff,sizeof(dIn_printfBuff),PSTR(".[%06lu] tkDigitalIn: DCD off(%d)\r\n\0"), tickCount,pin );	}
-		if ( pin == 0 ) { snprintf_P( dIn_printfBuff,sizeof(dIn_printfBuff),PSTR(".[%06lu] tkDigitalIn: DCD on(%d)\r\n\0"), tickCount,pin );	}
-
-		u_debugPrint(D_DIGITAL, dIn_printfBuff, sizeof(dIn_printfBuff) );
-
-	}
-}
-/*------------------------------------------------------------------------------------*/
-static void pv_pollTermsw(void)
-{
-u08 pin;
-u32 tickCount;
-
-	u_readTermsw(&pin);
-	// Solo indico los cambios.
-	if ( systemVars.termsw != pin ) {
-		systemVars.termsw = pin;
-		tickCount = xTaskGetTickCount();
-		snprintf_P( dIn_printfBuff,sizeof(dIn_printfBuff),PSTR(".[%06lu] tkDigitalIn: TERMSW=%d\r\n\0"), tickCount,pin );
-
-		u_debugPrint(D_DIGITAL, dIn_printfBuff, sizeof(dIn_printfBuff) );
 	}
 }
 /*------------------------------------------------------------------------------------*/
