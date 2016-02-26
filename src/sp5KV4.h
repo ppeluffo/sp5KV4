@@ -55,7 +55,7 @@
 // DEFINICION DEL TIPO DE SISTEMA
 //----------------------------------------------------------------------------
 #define SP5K_REV "4.1.2"
-#define SP5K_DATE "@ 20160225"
+#define SP5K_DATE "@ 20160226"
 
 #define SP5K_MODELO "sp5KV3 HW:avr1284P R5.0"
 #define SP5K_VERSION "FW:FRTOS8"
@@ -96,7 +96,7 @@ void tkGprsInit(void);
 void tkConsignas(void * pvParameters);
 void tkGprsRx(void * pvParameters);
 
-TaskHandle_t xHandle_tkCmd, xHandle_tkControl, xHandle_tkDigitalIn, xHandle_tkAIn, xHandle_tkGprs , xHandle_tkGprsRx, xHandle_tkConsignas;
+TaskHandle_t xHandle_tkCmd, xHandle_tkControl, xHandle_tkDigitalIn, xHandle_tkAIn, xHandle_tkGprs, xHandle_tkGprsRx, xHandle_tkConsignas;
 
 s08 startTask;
 typedef struct {
@@ -109,7 +109,6 @@ wdgStatus_t wdgStatus;
 // Mensajes entre tareas
 #define TKA_PARAM_RELOAD		0x01	// to tkAnalogIN: reload
 #define TKA_READ_FRAME			0x02	// to tkAnalogIN: (mode service) read a frame
-#define TKD_PARAM_RELOAD		0x01	// to tkDigitalIN: reload
 
 #define TKG_PARAM_RELOAD		0x01	// to tkGprsIN: reload
 #define TKG_PARAM_NO_DIAL		0x02	// to tkGprsIN: dial_not_allowed
@@ -247,7 +246,6 @@ systemVarsType systemVars,tmpSV;
 
 // DEBUG
 typedef enum { D_NONE = 0, D_BASIC = 1, D_DATA = 2, D_GPRS = 4, D_MEM = 8, D_DIGITAL = 16, D_CONSIGNA = 32, D_DEBUG = 64 } t_debug;
-typedef enum { M_OFF, M_OFF_IDLE, M_ON_CONFIG, M_ON_READY } t_modemStatus;
 typedef enum { OFF = 0, ON = 1 } t_onOff;
 typedef enum { T_APAGADA = 0, T_PRENDIDA = 1 } t_terminalStatus;
 typedef enum { INIT = 0, SET_ON = 1, SET_OFF = 2, STATUS = 3 } t_setOnOff;
@@ -335,6 +333,7 @@ char debug_printfBuff[CHAR128];
 
 #define T_DAILYRESET		720
 #define T_EXITSERVICEMODE	30
+#define  T_RESET4MODEM		10
 
 //------------------------------------------------------------------------------------
 // DCD

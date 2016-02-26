@@ -18,6 +18,7 @@ void pv_checkWdg(void );
 void pv_checkTerminal(void);
 void pv_dailyReset(void);
 void pv_autoServiceExit(void);
+void pv_modemControl(void);
 
 TimerHandle_t terminalTimer;
 void  pv_terminalTimerCallBack( TimerHandle_t pxTimer );
@@ -96,7 +97,38 @@ StatBuffer_t pxFFStatBuffer;
 		pv_checkTerminal();
 		pv_dailyReset();
 		pv_autoServiceExit();
+		pv_modemControl();
 
+	}
+}
+//------------------------------------------------------------------------------------
+void pv_modemControl(void)
+{
+	// Se invoca c/1 sec.
+	// Cuento hasta 60 para tener 1 minuto.
+	// Se usa para resetear al sistema si el modem esta mas de 10 mins prendido.
+	// en modo DISCRETO.
+
+static s08 mCounter = 60;
+static s16 modemPrendidoCounter = T_RESET4MODEM;
+
+	if ( mCounter-- > 0 )
+		return;
+
+	mCounter = 60;
+
+	if ( ( u_modemPwrStatus() == PRENDIDO ) && ( systemVars.pwrMode == PWR_DISCRETO ) && ( systemVars.wrkMode == WK_NORMAL) ) {
+
+		if ( modemPrendidoCounter-- <= 0 ) {
+
+			snprintf_P( ctl_printfBuff,sizeof(ctl_printfBuff),PSTR("Modem prendido TIMEOUT..\r\n\0"));
+			FreeRTOS_write( &pdUART1, ctl_printfBuff, sizeof(ctl_printfBuff) );
+			// RESET
+			u_reset();
+		}
+
+	} else {
+		modemPrendidoCounter = T_RESET4MODEM;
 	}
 }
 //------------------------------------------------------------------------------------
@@ -124,6 +156,7 @@ static s16 serviceModeCounter = T_EXITSERVICEMODE;
 			// RESET
 			u_reset();
 		}
+
 	} else {
 		// En WRK_NORMAL reseteo el timer.
 		serviceModeCounter = T_EXITSERVICEMODE;

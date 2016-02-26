@@ -25,19 +25,12 @@ static void pv_pollQ(void);
 
 static char dIn_printfBuff[CHAR64];	// Buffer de impresion
 static dinData_t digIn;				// Estructura local donde cuento los pulsos.
-static struct {
-	s08 serviceMode;
-	s08 msgReload;
-} D_flags;
 
 /*------------------------------------------------------------------------------------*/
 void tkDigitalIn(void * pvParameters)
 {
 
 ( void ) pvParameters;
-BaseType_t xResult;
-uint32_t ulNotifiedValue;
-
 
 	while ( !startTask )
 		vTaskDelay( ( TickType_t)( 100 / portTICK_RATE_MS ) );
@@ -52,34 +45,16 @@ uint32_t ulNotifiedValue;
 	digIn.pulses[0] = 0;
 	digIn.pulses[1] = 0;
 
-	D_flags.msgReload = FALSE;
-	D_flags.serviceMode = FALSE;
-
 	for( ;; )
 	{
 		u_clearWdg(WDG_DIN);
 
-		// Espero hasta 100ms por un mensaje.
-		xResult = xTaskNotifyWait( 0x00, ULONG_MAX, &ulNotifiedValue, ((TickType_t) 250 / portTICK_RATE_MS ) );
-		// Si llego un mensaje, prendo la flag correspondiente.
-		if ( xResult == pdTRUE ) {
-			if ( ( ulNotifiedValue & TKD_PARAM_RELOAD ) != 0 ) {
-				// Mensaje de reload configuration.
-				D_flags.msgReload = TRUE;
-			}
-		}
-
-		// Mensaje de cambio de configuracion. Releo la misma
-		if ( D_flags.msgReload ) {
-			D_flags.msgReload = FALSE;
-			if ( systemVars.wrkMode != WK_NORMAL ) {
-				D_flags.serviceMode = TRUE;
-			}
-		}
+		// Espero hasta 250ms por un mensaje.
+		vTaskDelay( ( TickType_t)( 250 / portTICK_RATE_MS ) );
 
 		// Solo poleo las entradas en modo normal. En modo service no para
 		// poder manejarlas por los comandos de servicio.
-		if ( ! D_flags.serviceMode) {
+		if ( systemVars.wrkMode == WK_NORMAL) {
 			pv_pollQ();
 		}
 	}

@@ -29,7 +29,9 @@
  * - Idem en tkGprs.
  * - Tambien controlo no exceder 12hs sin discar.
  * - Elimino el control del pin de la terminal de tkDigital y lo dejo todo en tkControl.
- *
+ * - En tkControl agrego la rutina pv_modemControl para controlar que el modem no quede
+ *   prendido mas de 10mins. Con esto si alguna rutina queda en loop, no apagaria el modem y
+ *   podriamos agarrar el problema.
  *
  * V4.0.9:
  * El problema es que el ADC no se prende y la lectura de los canales es erronea.
