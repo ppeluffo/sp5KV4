@@ -222,15 +222,17 @@ u16 tryes;
 	FreeRTOS_ioctl(&pdI2C,ioctl_I2C_SET_BYTEADDRESS,&val);
 
 	// Por ultimo escribo la memoria. Escribo un pagina entera, 64 bytes.
-
+	// Reintento hasta 3 veces.
 	for ( tryes = 0; tryes < 3; tryes++ ) {
 		// Write
 		xReturn = FreeRTOS_write(&pdI2C, &FCB.ff_buffer, FF_RECD_SIZE);
 		taskYIELD();
 		// Verify
 		FreeRTOS_read(&pdI2C, &FCB.check_buffer, FF_RECD_SIZE);
+
 		if ( memcmp (&FCB.check_buffer, &FCB.ff_buffer, FF_RECD_SIZE) == 0 )
 			break;
+
 		if  ( tryes == 3 ) {
 			snprintf_P( debug_printfBuff,sizeof(debug_printfBuff),PSTR("FS WR ERR: [%d]\r\n\0"), val);
 			FreeRTOS_write( &pdUART1, debug_printfBuff, sizeof(debug_printfBuff) );

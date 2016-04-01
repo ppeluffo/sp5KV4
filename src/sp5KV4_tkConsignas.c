@@ -2,6 +2,18 @@
 
 static char cons_printfBuff[CHAR128];
 
+//------------------------------------------------------------------------------------
+float fuzzy_me ( float value, float xa, float xb, float xc, float xd);
+float in_eBajo, in_eMedio, in_eAlto;	// Variables linguisticas de la entrada
+float out_pBajo, out_pMedio, out_pAlto; // Salidas
+void fuzzificar( float input );
+void rule_evaluation(void);
+float desfuzzificar(void);
+float area ( float h, float xa, float xb, float xc, float xd);
+float cog ( float h, float xa, float xb, float xc, float xd);
+
+//------------------------------------------------------------------------------------
+
 // Estados
 typedef enum {  cST_INIT = 0,
 				cST_Cons01,
@@ -421,3 +433,103 @@ u16 now;
 
 }
 /*------------------------------------------------------------------------------------*/
+/*
+ * CONTROL DE CONSIGNAS CONTINUAS CON FUZZY LOGIC
+ *
+ */
+
+//------------------------------------------------------------------------------------
+/*
+float fuzzy_me ( float value, float xa, float xb, float xc, float xd)
+{
+	// Convierte una entrada a un valor de la variable linguistica
+	// Utilizamos funciones trapezoidales.
+
+float dom;
+
+	if ( value < xa ) {
+		dom = 0;
+	} else if ( ( xa <= value) && ( value < xb)) {
+		dom = ( value - xa ) / ( xb - xa );
+	} else if ( ( xb <= value ) && ( value < xc )) {
+		dom = 1;
+	} else if ( ( xc <= value) && ( value < xd) ) {
+		dom = ( xd - value) / ( xd -xc );
+	} else {
+		dom = 0;
+	}
+
+	return(dom);
+}
+//------------------------------------------------------------------------------------
+void fuzzificar( float input )
+{
+	// Dado el valor de la entrada, hallo la componente de c/u de las variables
+	// linguisticas.
+	// Aqui es donde defino los puntos de la funcion de pertenencia
+
+	in_eBajo = fuzzy_me( input, 0, 0, 0, 0.5);
+	in_eMedio = fuzzy_me( input, 0, 0.5, 0.5, 1);
+	in_eAlto = fuzzy_me( input, 0.5, 1, 6, 6);
+
+	snprintf_P( cons_printfBuff,sizeof(cons_printfBuff),PSTR("fuzzificar: in=%l, e_bajo=%l, e_medio=%l, e_alto=%l\r\n\0"), input, in_eBajo, in_eMedio, in_eAlto );
+	FreeRTOS_write( &pdUART1, cons_printfBuff,sizeof(cons_printfBuff) );
+
+}
+//------------------------------------------------------------------------------------
+void rule_evaluation(void)
+{
+	// 1: if ( error BAJO ) then ( pulso CORTO)
+	// 2: if ( error MEDIO ) then ( pulso MEDIO )
+	// 3: if ( error ALTO ) then ( pulso ALTO )
+
+	out_pBajo = in_eBajo;
+	out_pMedio = in_eMedio;
+	out_pAlto = in_eAlto;
+
+}
+//------------------------------------------------------------------------------------
+float desfuzzificar(void)
+{
+
+float S_pBajo, S_pMedio, S_pAlto;
+float cog_pBajo, cog_pMedio, cog_pAlto;
+
+	S_pBajo = area(out_pBajo, 0, 0, 0, 0.5);
+	S_pMedio = area(out_pMedio, 0, 0.5, 0.5, 1);
+	S_pAlto = area(out_pAlto,  0.5, 1, 6, 6);
+
+	snprintf_P( cons_printfBuff,sizeof(cons_printfBuff),PSTR("desfuzzificar: S_bajo=%l, S_medio=%l, S_alto=%l\r\n\0"), S_pBajo, S_pMedio, S_pAlto );
+	FreeRTOS_write( &pdUART1, cons_printfBuff,sizeof(cons_printfBuff) );
+
+	cog_pBajo = cog(out_pBajo, 0, 0, 0, 0.5);
+	cog_pMedio = cog(out_pMedio, 0, 0.5, 0.5, 1);
+	cog_pAlto = cog(out_pAlto,  0.5, 1, 6, 6);
+
+
+}
+//------------------------------------------------------------------------------------
+float area ( float h, float xa, float xb, float xc, float xd)
+{
+	// La base no puede ser cero
+float S = 0;
+
+	if ( xd > xa ) {
+		S = ( xd - xa ) * ( h - h*h / 2 );
+	}
+	return(S);
+
+}
+//------------------------------------------------------------------------------------
+float cog ( float h, float xa, float xb, float xc, float xd)
+{
+	// Calculo el x del centro de gravedad a partir de http://mathworld.wolfram.com/Trapezoid.html
+
+float a, b, c,d;
+
+	c = sqrt ( square(h) + square( xb -xa) );
+	d = sqrt ( square(h) + square( xd -xc) );
+
+}
+//------------------------------------------------------------------------------------
+*/

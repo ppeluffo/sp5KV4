@@ -48,6 +48,7 @@ static u32 tickCount;					// para usar en los mensajes del debug.
 static double rAIn[NRO_CHANNELS + 1];	// Almaceno los datos de conversor A/D
 static frameData_t Aframe;
 static s08 f_skipFrame;					// indico si el frame leido debe ser descartado ( MCP error )
+static s08 pollingError;
 
 static struct {
 	s08 starting;			// flag que estoy arrancando
@@ -399,6 +400,9 @@ static int trD04(void)
 
 	AN_counters.nroPoleos = CICLOS_POLEO;
 
+	// Esta variable controla los errores reales de poleo, no del dummyCycle.
+	pollingError = FALSE;
+
 	// Init Data Structure
 	rAIn[0] = 0;
 	rAIn[1] = 0;
@@ -424,7 +428,7 @@ s08 retS;
 	tickCount = xTaskGetTickCount();
 	retS = ADS7827_readCh0( &adcRetValue);
 	if ( !retS ) {
-		catch_I2C_Error(0);
+		catch_I2C_Error(127);		// El canal dummy es el 127.
 		// Posiblemente el MCP esta bien pero ya no prendi al ADC. Lo prendo
 		MCP_setSensorPwr( 1 );
 		MCP_setAnalogPwr( 1 );
@@ -446,6 +450,7 @@ s08 retS;
 	retS = ADS7827_readCh0( &adcRetValue);	// AIN0->ADC3;
 	if ( !retS ) {
 		catch_I2C_Error(0);
+		pollingError = TRUE;
 	}
 	rAIn[0] += adcRetValue;
 	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("\tch_0,adc_3,val=%d,r0=%.0f\r\n\0"),adcRetValue, rAIn[0]);
@@ -454,6 +459,7 @@ s08 retS;
 	retS = ADS7827_readCh1( &adcRetValue); // AIN1->ADC5;
 	if ( !retS ) {
 		catch_I2C_Error(1);
+		pollingError = TRUE;
 	}
 	rAIn[1] += adcRetValue;
 	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("\tch_1,adc_5,val=%d,r1=%.0f\r\n\0"),adcRetValue, rAIn[1]);
@@ -462,6 +468,7 @@ s08 retS;
 	retS = ADS7827_readCh2( &adcRetValue); // AIN2->ADC7;
 	if ( !retS ) {
 		catch_I2C_Error(2);
+		pollingError = TRUE;
 	}
 	rAIn[2] += adcRetValue;
 	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("\tch_2,adc_7,val=%d,r1=%.0f\r\n\0"), adcRetValue, rAIn[2]);
@@ -470,6 +477,7 @@ s08 retS;
 	retS = ADS7827_readBatt( &adcRetValue); // BATT->ADC1;
 	if ( !retS ) {
 		catch_I2C_Error(3);
+		pollingError = TRUE;
 	}
 	rAIn[3] += adcRetValue;
 	snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("\tch_3,adc_1,val=%d,r1=%.0f\r\n\0"), adcRetValue, rAIn[3]);
@@ -534,6 +542,27 @@ StatBuffer_t pxFFStatBuffer;
 	// Convierto la bateria.
 	rAIn[NRO_CHANNELS] = (15 * rAIn[NRO_CHANNELS]) / 4096;	// Bateria
 
+	// DEBUG
+	for ( channel = 0; channel <= NRO_CHANNELS; channel++) {
+		tickCount = xTaskGetTickCount();
+		snprintf_P( aIn_printfBuff,CHAR128,PSTR(".[%06lu] tkAnalogIn::trD06 MagCh[%d]=%.02f\r\n\0"), tickCount, channel, rAIn[channel]);
+		u_debugPrint(D_DATA, aIn_printfBuff, sizeof(aIn_printfBuff) );
+	}
+
+	if ( f_skipFrame ) {
+		snprintf_P( aIn_printfBuff,CHAR128,PSTR(".[%06lu] tkAnalogIn::trD06 f_skipFrame=TRUE\r\n\0"), tickCount );
+	} else {
+		snprintf_P( aIn_printfBuff,CHAR128,PSTR(".[%06lu] tkAnalogIn::trD06 f_skipFrame=FALSE\r\n\0"), tickCount );
+	}
+	u_debugPrint(D_DATA, aIn_printfBuff, sizeof(aIn_printfBuff) );
+
+	if ( pollingError ) {
+		snprintf_P( aIn_printfBuff,CHAR128,PSTR(".[%06lu] tkAnalogIn::trD06 pollingError=TRUE\r\n\0"), tickCount );
+	} else {
+		snprintf_P( aIn_printfBuff,CHAR128,PSTR(".[%06lu] tkAnalogIn::trD06 pollingError=FALSE\r\n\0"), tickCount );
+	}
+	u_debugPrint(D_DATA, aIn_printfBuff, sizeof(aIn_printfBuff) );
+
 	// Paso al systemVars.
 	while ( xSemaphoreTake( sem_SYSVars, ( TickType_t ) 1 ) != pdTRUE )
 		taskYIELD();
@@ -541,14 +570,19 @@ StatBuffer_t pxFFStatBuffer;
 	pos = snprintf_P( aIn_printfBuff, sizeof(aIn_printfBuff), PSTR("frame::{" ));
 
 	// Inserto el timeStamp.
-	RTC_read(&Aframe.rtc);
-	pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ),PSTR( "%04d%02d%02d,"),Aframe.rtc.year,Aframe.rtc.month,Aframe.rtc.day );
-	pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR("%02d%02d%02d,"),Aframe.rtc.hour,Aframe.rtc.min, Aframe.rtc.sec );
+	if ( RTC_read(&Aframe.rtc) ) {
+		pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ),PSTR( "%04d%02d%02d,"),Aframe.rtc.year,Aframe.rtc.month,Aframe.rtc.day );
+		pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR("%02d%02d%02d,"),Aframe.rtc.hour,Aframe.rtc.min, Aframe.rtc.sec );
+	} else {
+		// Error al leer el RTC:
+		pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR("20101010,012345,"));
+	}
 
 	// Valores analogicos
 	for ( channel = 0; channel < NRO_CHANNELS; channel++) {
 		// Si la lectura es correcta paso los datos al Aframe
-		if ( f_skipFrame == FALSE ) {
+		//if ( f_skipFrame == FALSE ) {
+		if ( ! pollingError ) {
 			Aframe.analogIn[channel] = rAIn[channel];
 		}
 		pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR("%s=%.02f,"),systemVars.aChName[channel],Aframe.analogIn[channel] );
@@ -564,7 +598,8 @@ StatBuffer_t pxFFStatBuffer;
 
 	// Bateria
 	// Si la lectura es correcta paso los datos al Aframe
-	if ( f_skipFrame == FALSE ) {
+	//if ( f_skipFrame == FALSE ) {
+	if ( ! pollingError ) {
 		Aframe.batt = rAIn[3];
 	}
 	pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR(",bt=%.02f}\0"),Aframe.batt );
@@ -603,8 +638,9 @@ StatBuffer_t pxFFStatBuffer;
 		pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ), PSTR("\r\n\0"));
 	}
 
-	if ( f_skipFrame == TRUE ) {
-		pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ),PSTR("Skipped frame\r\n\0"));
+	//if ( f_skipFrame == TRUE ) {
+	if ( pollingError ) {
+		pos += snprintf_P( &aIn_printfBuff[pos], ( sizeof(aIn_printfBuff) - pos ),PSTR("Skipped frame (pollError)\r\n\0"));
 	}
 
 	FreeRTOS_write( &pdUART1, aIn_printfBuff, sizeof(aIn_printfBuff) );
@@ -709,7 +745,7 @@ u08 regValue;
 		// El bus I2C anda bien y el problema esta en el ADC o en el MCP
 		if ( regValue != 0x64) {
 			// El MCP esta desconfigurado: Lo reprogramo
-			snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("**DEBUG::tkAnalogIn::trD05 MCP ERROR !!\r\n\0"));
+			snprintf_P( aIn_printfBuff,sizeof(aIn_printfBuff),PSTR("**DEBUG::tkAnalogIn::trD05 MCP ERROR (ch=%d),(regV=%d) !!\r\n\0"),channel,regValue);
 			pvMCP_init_MCP1(1);
 		} else {
 			// El problema esta en el ADC

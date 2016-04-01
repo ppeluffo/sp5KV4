@@ -2663,7 +2663,7 @@ static int gTR_d12(void)
 u08 pos;
 StatBuffer_t pxFFStatBuffer;
 
-	FF_seek();
+	FF_seek(); // Ajusta la posicion del puntero de lectura al primer registro a leer
 	vTaskDelay( ( TickType_t)( 1000 / portTICK_RATE_MS ) );
 
 	// HEADER:
@@ -2739,8 +2739,16 @@ StatBuffer_t pxFFStatBuffer;
 	// Siempre trasmito los datos aunque vengan papasfritas.
 	// Armo el frame
 	memset( gprs_printfBuff, '\0', sizeof(gprs_printfBuff));
+
+	// Indice de la linea
 	pos = snprintf_P( gprs_printfBuff,sizeof(gprs_printfBuff),PSTR("&CTL=%d"), pxFFStatBuffer.RD );
+
+	// Calidad del frame.
+	pos += snprintf_P( &gprs_printfBuff[pos],( sizeof(gprs_printfBuff) - pos ),PSTR("&ST=%d"), pxFFStatBuffer.errno );
+
+	// Aqui indico si los datos leidos de memoria son correctos o hubo un error.
 	pos += snprintf_P( &gprs_printfBuff[pos],( sizeof(gprs_printfBuff) - pos ),PSTR("&LINE=") );
+
 	pos += snprintf_P( &gprs_printfBuff[pos],( sizeof(gprs_printfBuff) - pos ),PSTR( "%04d%02d%02d,"),Aframe.rtc.year,Aframe.rtc.month,Aframe.rtc.day );
 	pos += snprintf_P( &gprs_printfBuff[pos],( sizeof(gprs_printfBuff) - pos ), PSTR("%02d%02d%02d,"),Aframe.rtc.hour,Aframe.rtc.min, Aframe.rtc.sec );
 	// Valores analogicos
@@ -2753,6 +2761,7 @@ StatBuffer_t pxFFStatBuffer;
 	// Salidas
 	// Bateria
 	pos += snprintf_P( &gprs_printfBuff[pos],( sizeof(gprs_printfBuff) - pos ), PSTR("bt>%.2f"),Aframe.batt );
+
 	// Trasmito por el modem.
 	FreeRTOS_write( &pdUART0, gprs_printfBuff, pos );
 

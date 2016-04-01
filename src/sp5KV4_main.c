@@ -16,6 +16,11 @@
  *
  * !! Agregar el salir automaticamente luego de 30 mins del modo service.
  *
+ * V4.1.3:
+ * - Agrego en el frame de datos un campo que indique la calidad del frame.
+ *   Queda del tipo:
+ *   CTL=106&ST=0&LINE=20140607,083358,pA>62.12,pB>62.12,pc>4.23,q0>103.28,v1>22.4,bt>11.29
+ *
  * V4.1.2:
  * - Modifico la inicializacion de WDT siguiendo las recomendaciones de Atmel y verifico el
  *   funcionamiento de c/wdg.
